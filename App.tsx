@@ -3,7 +3,7 @@ import React, { useState, useEffect, useReducer, useRef, useMemo } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
     CustomMenuIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
-    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail 
+    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave
 } from './components/icons';
 import { EquipmentCategory, AppData, DailyData, EquipmentItem } from './types';
 import { CATEGORIES } from './constants';
@@ -107,7 +107,7 @@ const isItemActive = (item: EquipmentItem): boolean => {
 // --- ERROR BOUNDARY ---
 
 interface ErrorBoundaryProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 interface ErrorBoundaryState {
@@ -120,9 +120,11 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     super(props);
     this.state = { hasError: false, error: null };
   }
+
   static getDerivedStateFromError(error: Error) {
     return { hasError: true, error };
   }
+
   render() {
     if (this.state.hasError) {
       return (
@@ -320,25 +322,25 @@ const AppContent = () => {
 
 
   return (
-    // Updated Background: Glossy White Gradient
-    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50 to-slate-100 text-gray-800 font-sans pb-32">
+    // Updated Background: Glossy Silver/White Gradient
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200 text-gray-800 font-sans pb-32">
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={handleOpenModal}/>
       
-      {/* Header: Milky Glass Theme */}
-      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl shadow-sm border-b border-white/60 pt-3 pb-2 px-4">
+      {/* Header: Crystal White Glass */}
+      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-2xl shadow-sm border-b border-white/60 pt-3 pb-2 px-4">
         <div className="container mx-auto">
             <div className="flex justify-between items-center mb-2">
                 {/* Menu Icon */}
                 <button
                     onClick={() => setIsMenuOpen(true)}
-                    className="active:scale-95 transition-transform"
+                    className="active:scale-95 transition-transform drop-shadow-md"
                     aria-label="Open menu"
                 >
-                    <CustomMenuIcon className="w-14 h-14 drop-shadow-md" />
+                    <CustomMenuIcon className="w-14 h-14" />
                 </button>
 
-                {/* Action Buttons: Recessed Light Box for Depth */}
-                <div className="flex items-center gap-0.5 bg-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] p-1.5 rounded-2xl border border-white">
+                {/* Action Buttons: Recessed Glossy Box */}
+                <div className="flex items-center gap-0.5 bg-slate-50/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)] p-1.5 rounded-2xl border border-white/60 backdrop-blur-sm">
                     <ActionButton onClick={handleAddItem}><IconPlus className="w-5 h-5" /></ActionButton>
                     <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-5 h-5" /></ActionButton>
                     {isGlobalDeleteMode && hasSelectedItems && (
@@ -353,8 +355,8 @@ const AppContent = () => {
 
             {/* Date: Centered below */}
             <div className="text-center">
-                <div className="inline-block px-6 py-1 rounded-full bg-white/50 border border-white/60 backdrop-blur-md shadow-sm">
-                    <div className="text-lg font-extrabold text-gray-600 tracking-tight">
+                <div className="inline-block px-6 py-1 rounded-full bg-white/60 border border-white/80 backdrop-blur-xl shadow-sm">
+                    <div className="text-lg font-extrabold text-gray-500 tracking-tight">
                         {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                 </div>
@@ -362,7 +364,7 @@ const AppContent = () => {
         </div>
       </header>
 
-      <main className="container mx-auto p-3">
+      <main className="container mx-auto p-3 space-y-5">
         {CATEGORIES.map(category => (
             <EquipmentSection 
                 key={`${formattedDate}-${category}`} 
@@ -428,9 +430,9 @@ const ActionButton = ({ children, onClick, isPrimary = false, isDanger = false }
     <button 
         onClick={onClick} 
         className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-100 ease-in-out shadow-sm border active:shadow-inner active:scale-95 active:translate-y-px ${
-            isPrimary ? 'bg-cyan-500 border-cyan-600 text-white hover:bg-cyan-400' : 
-            isDanger ? 'bg-red-50 border-red-200 text-red-500 hover:bg-red-100 active:bg-red-200' :
-            'bg-white border-gray-200 text-gray-600 hover:bg-gray-50 active:bg-gray-100'
+            isPrimary ? 'bg-gradient-to-b from-cyan-400 to-cyan-500 border-cyan-600 text-white hover:from-cyan-300 hover:to-cyan-400' : 
+            isDanger ? 'bg-gradient-to-b from-red-50 to-red-100 border-red-200 text-red-500 hover:from-red-100 hover:to-red-200' :
+            'bg-gradient-to-b from-white to-gray-50 border-gray-200 text-gray-600 hover:from-gray-50 hover:to-gray-100'
         }`}
     >
         {children}
@@ -450,9 +452,10 @@ const EquipmentSection: React.FC<{
     onOpenCamera: (item: EquipmentItem) => void;
 }> = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }) => {
     return (
-        <div className="mb-6" onClick={onActivate}>
-            <h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest drop-shadow-sm mb-2 ml-2">{category}</h2>
-            <section className={`p-2 bg-white/60 backdrop-blur-lg border border-white/80 rounded-xl shadow-sm transition-all ${isActive ? 'ring-2 ring-white/60' : ''}`}>
+        <div onClick={onActivate}>
+            <h2 className="text-lg font-bold text-cyan-700 uppercase tracking-widest drop-shadow-sm mb-2 ml-2">{category}</h2>
+            {/* Glass Prism Card */}
+            <section className={`p-2 bg-white/60 backdrop-blur-md border border-white/80 rounded-xl shadow-lg shadow-slate-200/50 transition-all duration-300 ${isActive ? 'ring-1 ring-white shadow-xl scale-[1.01]' : ''}`}>
                 <div className="space-y-2">
                     {items.map(item => (
                         <EquipmentRow 
@@ -477,7 +480,7 @@ const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentIt
     const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
     
     return (
-        <div className={`flex items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? 'bg-red-500/10' : 'bg-white/40'}`}>
+        <div className={`flex items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? 'bg-red-500/10 border border-red-200' : 'bg-white/30'}`}>
             {isDeleteMode && <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="form-checkbox h-5 w-5 rounded bg-gray-100 border-gray-300 text-cyan-600 mr-1 flex-shrink-0"/>}
             
             {/* Input Container: Optimized for Mobile Widths */}
@@ -507,292 +510,487 @@ const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentIt
 
                 {/* Buttons: Tightly Packed */}
                 <div className="flex-shrink-0 flex items-center justify-center gap-0.5 ml-0.5">
-                    <button onClick={onOpenCamera} className="w-7 h-7 flex items-center justify-center bg-white/80 hover:bg-white rounded-md active:scale-95 text-gray-600 shadow-sm border border-gray-200"><IconCamera className="w-4 h-4"/></button>
-                    <button onClick={onViewGallery} className="relative w-7 h-7 flex items-center justify-center bg-white/80 hover:bg-white rounded-md active:scale-95 disabled:opacity-50 text-gray-600 shadow-sm border border-gray-200" disabled={item.photos.length === 0}>
+                    <button onClick={onOpenCamera} className="w-7 h-7 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 rounded-md active:scale-95 text-gray-600 shadow-sm border border-gray-200"><IconCamera className="w-4 h-4"/></button>
+                    <button onClick={onViewGallery} className="relative w-7 h-7 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 rounded-md active:scale-95 disabled:opacity-50 text-gray-600 shadow-sm border border-gray-200" disabled={item.photos.length === 0}>
                         <IconGallery className="w-4 h-4"/>
-                        {item.photos.length > 0 && <span className="absolute -top-1 -right-1 flex justify-center items-center w-3 h-3 text-[9px] font-bold text-white bg-cyan-500 rounded-full shadow-sm">{item.photos.length}</span>}
+                        {item.photos.length > 0 && (
+                            <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-[8px] w-3 h-3 flex items-center justify-center rounded-full shadow-sm">{item.photos.length}</span>
+                        )}
                     </button>
                 </div>
             </div>
         </div>
     );
-};
+}
 
-// Input: Zero padding + Centered text to ensure no hidden characters on mobile
-const InputWithLabel = ({ onCopy, ...rest }: React.InputHTMLAttributes<HTMLInputElement> & { onCopy?: () => void }) => (
-    <div className="relative w-full h-full">
-        <input {...rest} className="w-full h-9 bg-white/80 border border-gray-200 rounded-md py-0 px-0 text-center focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-colors placeholder-gray-400 text-gray-700 text-sm font-medium truncate shadow-sm"/>
-        {onCopy && <button onClick={onCopy} className="absolute inset-y-0 right-0 flex items-center pr-0.5 text-gray-400 hover:text-cyan-600 active:scale-90 transition-all"><IconClipboard className="w-3 h-3"/></button>}
+// Updated Input: Carved Glass Style (Inner Shadow)
+const InputWithLabel = ({ placeholder, value, onChange, type = "text", maxLength, onCopy }: any) => (
+    <div className="relative group w-full">
+        <input
+            type={type}
+            value={value}
+            onChange={onChange}
+            placeholder={placeholder}
+            maxLength={maxLength}
+            className="w-full bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] border border-gray-200 rounded-md px-0 py-1.5 text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:bg-white placeholder-gray-400 transition-all text-center"
+        />
+        {onCopy && value && (
+            <button 
+                onClick={onCopy} 
+                className="absolute right-1 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
+            >
+                <IconClipboard className="w-3 h-3 text-gray-400 hover:text-cyan-600" />
+            </button>
+        )}
     </div>
 );
 
-// --- MODAL COMPONENTS (White/Milky Glass Theme) ---
+const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData; allData: AppData; currentDate: string }) => {
+    const calculateTotal = (items: EquipmentItem[]) => items.reduce((acc, item) => {
+         if (!isItemActive(item)) return acc;
+         const qty = parseInt(item.qt, 10);
+         return acc + (isNaN(qty) ? 1 : qty);
+    }, 0);
 
-const Modal = ({ children, onClose, title, size = 'md' }: { children?: React.ReactNode, onClose: () => void, title: string, size?: string }) => (
-    <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
-      <div className={`bg-white/95 backdrop-blur-2xl border border-white rounded-2xl shadow-2xl w-full ${size === 'lg' ? 'max-w-lg' : 'max-w-md'} p-6 animate-slide-in-up text-gray-800`} onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
-          <h2 className="text-xl font-bold text-gray-700">{title}</h2>
-          <button onClick={onClose} className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500"><IconX className="w-5 h-5"/></button>
-        </div>
+    const dailyTotal = useMemo(() => {
+        return Object.values(data).reduce((acc, items) => acc + calculateTotal(items), 0);
+    }, [data]);
+
+    const monthlyTotal = useMemo(() => {
+        const [currentYear, currentMonth] = currentDate.split('-');
+        let total = 0;
+        Object.entries(allData).forEach(([dateKey, dayData]) => {
+            const [y, m] = dateKey.split('-');
+            if (y === currentYear && m === currentMonth) {
+                 Object.values(dayData).forEach(items => {
+                     total += calculateTotal(items);
+                 });
+            }
+        });
+        return total;
+    }, [allData, currentDate]);
+
+    return (
+        <footer className="fixed bottom-0 left-0 w-full bg-slate-100/90 backdrop-blur-xl border-t border-white/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] p-3 z-40 pb-safe">
+            <div className="container mx-auto">
+                <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar snap-x">
+                    {CATEGORIES.map(category => (
+                        <div key={category} className="flex-shrink-0 snap-start bg-white/60 border border-white/80 rounded-xl px-4 py-2 min-w-[100px] flex flex-col items-center justify-center shadow-sm">
+                            <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider mb-1">{category}</span>
+                            <span className="text-xl font-black text-slate-700">{calculateTotal(data[category] || [])}</span>
+                        </div>
+                    ))}
+                    
+                    {/* Total Dia Box */}
+                    <div className="flex-shrink-0 snap-start bg-blue-50/80 border border-blue-100/80 rounded-xl px-4 py-2 min-w-[110px] flex flex-col items-center justify-center shadow-sm ring-1 ring-blue-200/50">
+                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">TOTAL DIA</span>
+                        <span className="text-xl font-black text-blue-800">{dailyTotal}</span>
+                    </div>
+
+                     {/* Soma Total Box */}
+                    <div className="flex-shrink-0 snap-start bg-cyan-50/80 border border-cyan-100/80 rounded-xl px-4 py-2 min-w-[110px] flex flex-col items-center justify-center shadow-sm ring-1 ring-cyan-200/50">
+                        <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider mb-1">SOMA TOTAL</span>
+                        <span className="text-xl font-black text-cyan-800">{monthlyTotal}</span>
+                    </div>
+                </div>
+            </div>
+        </footer>
+    );
+};
+
+// --- MODALS (Updated to Milky Glass Theme) ---
+
+const Modal = ({ children, onClose }: { children?: React.ReactNode; onClose: () => void }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
+    <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/50 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+      <div className="p-4 max-h-[80vh] overflow-y-auto relative">
+        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-1"><IconX className="w-5 h-5"/></button>
         {children}
       </div>
     </div>
+    <div className="absolute inset-0 -z-10" onClick={onClose} />
+  </div>
+);
+
+const CalendarModal = ({ currentDate, onClose, onDateSelect }: { currentDate: Date; onClose: () => void; onDateSelect: (d: Date) => void }) => {
+    const [viewDate, setViewDate] = useState(currentDate);
+    const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
+    const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
+    
+    const changeMonth = (delta: number) => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1));
+
+    return (
+        <Modal onClose={onClose}>
+            <div className="text-center mb-4">
+                <h3 className="text-xl font-bold text-gray-700 mb-4">Selecionar Data</h3>
+                <div className="flex justify-between items-center mb-4 px-4">
+                    <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-100"><IconChevronLeft className="w-5 h-5 text-gray-600"/></button>
+                    <span className="font-bold text-gray-700 text-lg capitalize">{viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                    <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-100"><IconChevronRight className="w-5 h-5 text-gray-600"/></button>
+                </div>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                    {['D','S','T','Q','Q','S','S'].map(d => <span key={d} className="text-xs font-bold text-gray-400">{d}</span>)}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                    {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} />)}
+                    {Array.from({ length: daysInMonth }).map((_, i) => {
+                        const d = i + 1;
+                        const isSelected = d === currentDate.getDate() && viewDate.getMonth() === currentDate.getMonth() && viewDate.getFullYear() === currentDate.getFullYear();
+                        return (
+                            <button 
+                                key={d} 
+                                onClick={() => onDateSelect(new Date(viewDate.getFullYear(), viewDate.getMonth(), d))}
+                                className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${isSelected ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-200' : 'hover:bg-gray-100 text-gray-600'}`}
+                            >
+                                {d}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+        </Modal>
+    );
+};
+
+const DownloadModal = ({ data, date, onClose }: { data: DailyData; date: string; onClose: () => void }) => {
+    const generateTextContent = () => {
+        let text = `RELATÓRIO DE EQUIPAMENTOS - ${date}\n\n`;
+        CATEGORIES.forEach(cat => {
+            const items = data[cat] || [];
+            if(items.length === 0) return;
+            text += `--- ${cat} ---\n`;
+            items.forEach(item => {
+                if(isItemActive(item)) {
+                     text += `QT: ${item.qt || '1'} | Contrato: ${item.contract} | Serial: ${item.serial}\n`;
+                }
+            });
+            text += '\n';
+        });
+        return text;
+    };
+
+    const downloadFile = (type: 'word' | 'excel') => {
+        let blob: Blob;
+        let filename = `equipamentos_${date}`;
+        
+        if (type === 'word') {
+            // HTML content for Word to preserve formatting better than plain text
+            const content = `
+                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+                <head><meta charset='utf-8'><title>Relatório</title></head>
+                <body>
+                <h1>Relatório de Equipamentos - ${date}</h1>
+                ${CATEGORIES.map(cat => {
+                    const items = data[cat] || [];
+                    if (!items.some(isItemActive)) return '';
+                    return `
+                        <h3>${cat}</h3>
+                        <ul>
+                        ${items.filter(isItemActive).map(item => `<li><b>QT:</b> ${item.qt || '1'} | <b>Contrato:</b> ${item.contract} | <b>Serial:</b> ${item.serial}</li>`).join('')}
+                        </ul>
+                    `;
+                }).join('')}
+                </body></html>
+            `;
+            blob = new Blob(['\ufeff', content], { type: 'application/msword' });
+            filename += '.doc';
+        } else {
+            // HTML Table for Excel
+             const content = `
+                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+                <head><meta charset="UTF-8"></head>
+                <body>
+                <table>
+                    <thead>
+                        <tr><th>Categoria</th><th>QT</th><th>Contrato</th><th>Serial</th></tr>
+                    </thead>
+                    <tbody>
+                        ${CATEGORIES.flatMap(cat => (data[cat] || []).filter(isItemActive).map(item => `
+                            <tr>
+                                <td>${cat}</td>
+                                <td>${item.qt || '1'}</td>
+                                <td>${item.contract}</td>
+                                <td>${item.serial}</td>
+                            </tr>
+                        `)).join('')}
+                    </tbody>
+                </table>
+                </body></html>
+            `;
+            blob = new Blob(['\ufeff', content], { type: 'application/vnd.ms-excel' });
+            filename += '.xls';
+        }
+
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    return (
+        <Modal onClose={onClose}>
+            <h3 className="text-xl font-bold text-center mb-6 text-gray-700">Salvar Manualmente</h3>
+            <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => downloadFile('word')} className="flex flex-col items-center justify-center p-4 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
+                    <IconFileWord className="w-12 h-12 text-blue-600 mb-2" />
+                    <span className="font-bold text-blue-800">Word</span>
+                </button>
+                <button onClick={() => downloadFile('excel')} className="flex flex-col items-center justify-center p-4 bg-green-50 border border-green-100 rounded-xl hover:bg-green-100 transition-colors">
+                    <IconFileExcel className="w-12 h-12 text-green-600 mb-2" />
+                    <span className="font-bold text-green-800">Excel</span>
+                </button>
+            </div>
+        </Modal>
+    );
+};
+
+const ShareModal = ({ data, date, onClose, isSharingApp }: { data?: DailyData; date?: string; onClose: () => void, isSharingApp?: boolean }) => {
+    const shareText = isSharingApp 
+        ? "Confira o App Controle de Equipamentos! Organize seu dia a dia." 
+        : `Confira os equipamentos do dia ${date}.`;
+
+    const handleShare = (platform: 'whatsapp' | 'telegram' | 'email') => {
+        let url = '';
+        if (platform === 'whatsapp') url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+        if (platform === 'telegram') url = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(shareText)}`;
+        if (platform === 'email') url = `mailto:?subject=${encodeURIComponent('Controle de Equipamentos')}&body=${encodeURIComponent(shareText)}`;
+        window.open(url, '_blank');
+    };
+
+    return (
+        <Modal onClose={onClose}>
+            <h3 className="text-xl font-bold text-center mb-6 text-gray-700">{isSharingApp ? 'Compartilhar App' : 'Exportar'}</h3>
+             <div className="flex justify-around">
+                <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center"><IconWhatsapp className="w-12 h-12 text-green-500 mb-1"/><span className="text-xs font-medium">WhatsApp</span></button>
+                <button onClick={() => handleShare('telegram')} className="flex flex-col items-center"><IconTelegram className="w-12 h-12 text-blue-500 mb-1"/><span className="text-xs font-medium">Telegram</span></button>
+                <button onClick={() => handleShare('email')} className="flex flex-col items-center"><IconEmail className="w-12 h-12 text-gray-500 mb-1"/><span className="text-xs font-medium">E-mail</span></button>
+            </div>
+        </Modal>
+    );
+};
+
+const SettingsModal = ({ onClose, onClearData }: { onClose: () => void; onClearData: () => void }) => (
+    <Modal onClose={onClose}>
+        <h3 className="text-xl font-bold text-center mb-6 text-gray-700">Configurações</h3>
+        <div className="space-y-3">
+            <button onClick={onClearData} className="w-full p-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100 hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
+                <IconTrash className="w-5 h-5"/> Limpar Tudo
+            </button>
+             <p className="text-xs text-center text-gray-400 mt-4">Versão Beta v0.0.1b</p>
+        </div>
+    </Modal>
+);
+
+const AboutModal = ({ onClose, onShareClick }: { onClose: () => void; onShareClick: () => void }) => (
+    <Modal onClose={onClose}>
+         <div className="text-center">
+            <CustomMenuIcon className="w-24 h-24 mx-auto mb-4 drop-shadow-xl" />
+            <h2 className="text-2xl font-black text-gray-800 mb-1">Controle de Equipamentos</h2>
+            <p className="text-sm font-mono text-cyan-600 bg-cyan-50 inline-block px-2 py-1 rounded mb-4">V0.0.1b</p>
+            
+            <div className="bg-gray-50 rounded-xl p-4 mb-4 text-left space-y-2 border border-gray-100">
+                <p className="text-sm text-gray-600"><span className="font-bold text-gray-800">Dono:</span> Leo Luz</p>
+                <p className="text-sm text-gray-600">App de gestão otimizado para mobile.</p>
+            </div>
+
+            <button onClick={onShareClick} className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
+                Compartilhar App
+            </button>
+         </div>
+    </Modal>
 );
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div className="fixed inset-0 bg-slate-500/20 backdrop-blur-sm flex justify-center items-center z-[60] p-4" onClick={onCancel}>
-        <div className="bg-white/95 backdrop-blur-2xl border border-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-slide-in-up" onClick={e => e.stopPropagation()}>
-            <p className="text-lg mb-6 text-center font-medium text-gray-700">{message}</p>
-            <div className="flex gap-4">
-                <button onClick={onCancel} className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-bold">Cancelar</button>
-                <button onClick={onConfirm} className="flex-1 py-2 rounded-lg bg-cyan-500 text-white font-bold shadow-md">Confirmar</button>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+        <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-white/60 transform scale-100 animate-fade-in">
+            <h3 className="text-lg font-bold text-gray-800 mb-3">Confirmação</h3>
+            <p className="text-gray-600 mb-6">{message}</p>
+            <div className="flex justify-end gap-3">
+                <button onClick={onCancel} className="px-4 py-2 text-gray-500 font-medium hover:bg-gray-100 rounded-lg">Cancelar</button>
+                <button onClick={onConfirm} className="px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 shadow-md">Confirmar</button>
             </div>
         </div>
     </div>
 );
 
-const CameraModal = ({ onClose, onCapture }: { onClose: () => void, onCapture: (photo: string, code?: string) => void }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
+const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmation }: { item: EquipmentItem; onClose: () => void; onUpdatePhotos: (photos: string[]) => void; setConfirmation: any }) => {
+    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+    const photos = item.photos;
+
+    if (photos.length === 0) return null;
+
+    const handleDelete = () => {
+        setConfirmation({
+            message: "Excluir esta foto?",
+            onConfirm: () => {
+                const newPhotos = photos.filter((_, i) => i !== currentPhotoIndex);
+                onUpdatePhotos(newPhotos);
+                if (newPhotos.length === 0) onClose();
+                else setCurrentPhotoIndex(prev => Math.min(prev, newPhotos.length - 1));
+            }
+        });
+    };
+
+    const handleShare = async () => {
+        const base64 = photos[currentPhotoIndex];
+        const blob = await (await fetch(base64)).blob();
+        const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
+        if (navigator.share) {
+            try { await navigator.share({ files: [file] }); } catch (e) { console.log(e); }
+        } else {
+            alert("Compartilhamento nativo não suportado.");
+        }
+    };
     
+    const handleDownload = () => {
+         const link = document.createElement("a");
+         link.href = photos[currentPhotoIndex];
+         link.download = `equipamento-${item.serial || 'foto'}-${currentPhotoIndex + 1}.jpg`;
+         link.click();
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col backdrop-blur-md">
+            <div className="flex justify-between items-center p-4 text-white">
+                <span className="font-mono text-sm opacity-70">{currentPhotoIndex + 1} / {photos.length}</span>
+                <button onClick={onClose} className="p-2 bg-white/10 rounded-full"><IconX className="w-6 h-6"/></button>
+            </div>
+            
+            <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+                 <img src={photos[currentPhotoIndex]} alt="Equipment" className="max-h-full max-w-full object-contain rounded-lg shadow-2xl" />
+                 
+                 {photos.length > 1 && (
+                     <>
+                        <button onClick={() => setCurrentPhotoIndex(i => (i > 0 ? i - 1 : photos.length - 1))} className="absolute left-4 p-2 bg-black/50 text-white rounded-full"><IconChevronLeft/></button>
+                        <button onClick={() => setCurrentPhotoIndex(i => (i < photos.length - 1 ? i + 1 : 0))} className="absolute right-4 p-2 bg-black/50 text-white rounded-full"><IconChevronRight/></button>
+                     </>
+                 )}
+            </div>
+
+            <div className="p-6 bg-black/40 backdrop-blur-xl flex justify-around items-center pb-safe">
+                <button onClick={handleDelete} className="flex flex-col items-center text-red-400 hover:text-red-300 gap-1"><IconTrash className="w-6 h-6"/><span className="text-xs">Excluir</span></button>
+                <button onClick={handleDownload} className="flex flex-col items-center text-blue-400 hover:text-blue-300 gap-1"><IconSave className="w-6 h-6"/><span className="text-xs">Baixar</span></button>
+                <button onClick={handleShare} className="flex flex-col items-center text-green-400 hover:text-green-300 gap-1"><IconShare className="w-6 h-6"/><span className="text-xs">Compartilhar</span></button>
+            </div>
+        </div>
+    );
+};
+
+const CameraModal = ({ onClose, onCapture }: { onClose: () => void; onCapture: (photo: string, code?: string) => void }) => {
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const [error, setError] = useState<string|null>(null);
+
     useEffect(() => {
         let stream: MediaStream;
-        const start = async () => {
+        const startCamera = async () => {
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                if (videoRef.current) videoRef.current.srcObject = stream;
-                
-                if ('BarcodeDetector' in window) {
-                     // @ts-ignore
-                     const barcodeDetector = new window.BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
-                     const interval = setInterval(async () => {
-                         if (videoRef.current && videoRef.current.readyState === 4) {
-                             try {
-                                 const barcodes = await barcodeDetector.detect(videoRef.current);
-                                 if (barcodes.length > 0) {
-                                     capture(barcodes[0].rawValue);
-                                     clearInterval(interval);
-                                 }
-                             } catch {}
-                         }
-                     }, 500);
-                     return () => clearInterval(interval);
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    // Experimental Barcode Detection
+                    if ('BarcodeDetector' in window) {
+                        const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
+                        const detect = setInterval(async () => {
+                             if (videoRef.current) {
+                                 try {
+                                     const barcodes = await barcodeDetector.detect(videoRef.current);
+                                     if (barcodes.length > 0) {
+                                         clearInterval(detect);
+                                         // Flash effect or sound could go here
+                                         onCapture('', barcodes[0].rawValue);
+                                     }
+                                 } catch(e) {}
+                             }
+                        }, 500);
+                    }
                 }
-            } catch (e) { console.error(e); onClose(); }
+            } catch (e) {
+                setError("Erro ao acessar a câmera. Verifique as permissões.");
+            }
         };
-        start();
+        startCamera();
         return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
     }, []);
 
-    const capture = (code?: string) => {
+    const takePhoto = () => {
         if (videoRef.current) {
             const canvas = document.createElement('canvas');
             canvas.width = videoRef.current.videoWidth;
             canvas.height = videoRef.current.videoHeight;
             canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
-            onCapture(canvas.toDataURL('image/jpeg'), code);
+            onCapture(canvas.toDataURL('image/jpeg'));
         }
     };
 
     return (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
-            <button onClick={onClose} className="absolute top-4 right-4 z-50 p-2 bg-white/20 rounded-full text-white"><IconX className="w-8 h-8"/></button>
-            <video ref={videoRef} autoPlay playsInline muted className="absolute w-full h-full object-cover" />
-            <div className="absolute bottom-10 w-full flex justify-center">
-                <button onClick={() => capture()} className="w-20 h-20 bg-white rounded-full border-4 border-gray-300 shadow-lg flex items-center justify-center"><div className="w-16 h-16 bg-gray-200 rounded-full border-2 border-gray-400"></div></button>
-            </div>
-        </div>
-    )
-}
-
-const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmation }: { item: EquipmentItem, onClose: () => void, onUpdatePhotos: (p: string[]) => void, setConfirmation: any }) => {
-    const [idx, setIdx] = useState(0);
-    const deletePhoto = () => setConfirmation({ message: "Apagar foto?", onConfirm: () => {
-        const newPhotos = item.photos.filter((_, i) => i !== idx);
-        onUpdatePhotos(newPhotos);
-        if (newPhotos.length === 0) onClose();
-        else if (idx >= newPhotos.length) setIdx(newPhotos.length - 1);
-    }});
-    
-    const share = async () => {
-        try {
-            const res = await fetch(item.photos[idx]);
-            const blob = await res.blob();
-            const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
-            if (navigator.canShare?.({ files: [file] })) navigator.share({ files: [file] });
-        } catch {}
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/80 z-50 flex flex-col p-4" onClick={onClose}>
-            <div className="relative flex-1 flex justify-center items-center bg-black rounded-lg overflow-hidden" onClick={e => e.stopPropagation()}>
-                <img src={item.photos[idx]} className="max-w-full max-h-full object-contain"/>
-                <div className="absolute top-4 left-4 flex gap-4">
-                    <button onClick={deletePhoto} className="p-3 bg-red-600 rounded-full text-white"><IconTrash className="w-6 h-6"/></button>
-                    <button onClick={share} className="p-3 bg-blue-600 rounded-full text-white"><IconShare className="w-6 h-6"/></button>
+        <div className="fixed inset-0 z-50 bg-black flex flex-col">
+            <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
+                {error ? <p className="text-white p-4 text-center">{error}</p> : <video ref={videoRef} autoPlay playsInline className="absolute w-full h-full object-cover" />}
+                 <div className="absolute inset-0 border-2 border-white/30 pointer-events-none flex items-center justify-center">
+                    <div className="w-64 h-64 border-2 border-white/50 rounded-lg relative">
+                        <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-cyan-400 -mt-1 -ml-1"></div>
+                        <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-cyan-400 -mt-1 -mr-1"></div>
+                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-cyan-400 -mb-1 -ml-1"></div>
+                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-cyan-400 -mb-1 -mr-1"></div>
+                    </div>
                 </div>
-                <button onClick={onClose} className="absolute top-4 right-4 p-3 bg-gray-700 rounded-full text-white"><IconX className="w-6 h-6"/></button>
+                <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"><IconX className="w-8 h-8"/></button>
             </div>
-            <div className="h-24 mt-4 flex gap-2 overflow-x-auto" onClick={e => e.stopPropagation()}>
-                {item.photos.map((src, i) => <img key={i} src={src} onClick={() => setIdx(i)} className={`h-full rounded border-2 ${i===idx?'border-cyan-500':'border-transparent opacity-50'}`}/>)}
+            <div className="p-8 bg-black/80 flex justify-center pb-safe">
+                <button onClick={takePhoto} className="w-16 h-16 rounded-full bg-white border-4 border-gray-300 shadow-lg active:scale-95 transition-transform"></button>
             </div>
         </div>
-    )
-}
-
-const DownloadModal = ({ data, date, onClose }: { data: DailyData, date: string, onClose: () => void }) => {
-    const download = (type: 'doc' | 'xls') => {
-        let mime = type === 'doc' ? 'application/msword' : 'application/vnd.ms-excel';
-        let ext = type;
-        let content = `<html><head><meta charset='utf-8'></head><body>`;
-        
-        if (type === 'doc') {
-             content += `<h1>Relatório - ${date}</h1>`;
-             Object.entries(data).forEach(([cat, items]) => {
-                 content += `<h2>${cat}</h2><ul>${items.filter(isItemActive).map(i => `<li>QT:${i.qt||1} | CT:${i.contract} | SN:${i.serial}</li>`).join('')}</ul>`;
-             });
-        } else {
-             content += `<table border='1'><tr><th>CAT</th><th>QT</th><th>CT</th><th>SN</th></tr>`;
-             Object.entries(data).forEach(([cat, items]) => {
-                 items.filter(isItemActive).forEach(i => content += `<tr><td>${cat}</td><td>${i.qt||1}</td><td>${i.contract}</td><td>${i.serial}</td></tr>`);
-             });
-             content += `</table>`;
-        }
-        content += `</body></html>`;
-        
-        const blob = new Blob(['\ufeff', content], { type: mime });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `Relatorio_${date}.${ext}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        onClose();
-    };
-
-    return (
-        <Modal onClose={onClose} title="Salvar">
-            <div className="flex gap-4 justify-center">
-                <button onClick={() => download('doc')} className="flex flex-col items-center p-4 bg-blue-50 rounded-xl w-24"><IconFileWord className="w-10 h-10 text-blue-600"/><span>Word</span></button>
-                <button onClick={() => download('xls')} className="flex flex-col items-center p-4 bg-green-50 rounded-xl w-24"><IconFileExcel className="w-10 h-10 text-green-600"/><span>Excel</span></button>
-            </div>
-        </Modal>
     );
 };
 
-const ShareModal = ({ data, date, onClose, isSharingApp }: { data?: DailyData, date?: string, onClose: () => void, isSharingApp?: boolean }) => {
-    const share = (platform: string) => {
-        const text = isSharingApp ? "Baixe o App Controle de Equipamentos!" : `Resumo ${date}: ${Object.keys(data!).length} categorias.`;
-        const url = window.location.href;
-        let link = '';
-        if(platform === 'wa') link = `https://api.whatsapp.com/send?text=${encodeURIComponent(text + ' ' + url)}`;
-        if(platform === 'tg') link = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
-        if(platform === 'em') link = `mailto:?subject=App&body=${encodeURIComponent(text + ' ' + url)}`;
-        window.open(link, '_blank');
-        onClose();
-    };
-    return (
-        <Modal onClose={onClose} title="Compartilhar">
-            <div className="flex gap-2 justify-around">
-                <button onClick={() => share('wa')} className="p-4 bg-green-50 rounded-lg"><IconWhatsapp className="w-8 h-8 text-green-600"/></button>
-                <button onClick={() => share('tg')} className="p-4 bg-blue-50 rounded-lg"><IconTelegram className="w-8 h-8 text-blue-500"/></button>
-                <button onClick={() => share('em')} className="p-4 bg-yellow-50 rounded-lg"><IconEmail className="w-8 h-8 text-yellow-600"/></button>
-            </div>
-        </Modal>
-    );
-};
-
-const SearchModal = ({ onClose, appData, onSelect }: { onClose: () => void, appData: AppData, onSelect: (r: any) => void }) => {
-    const [q, setQ] = useState('');
+const SearchModal = ({ onClose, appData, onSelect }: { onClose: () => void; appData: AppData; onSelect: (res: any) => void }) => {
+    const [query, setQuery] = useState('');
     const results = useMemo(() => {
-        if(q.length < 2) return [];
+        if (query.length < 2) return [];
         const res: any[] = [];
-        Object.entries(appData).forEach(([d, day]) => Object.entries(day).forEach(([c, items]) => {
-            // @ts-ignore
-            items.forEach(i => { if(i.serial.includes(q) || i.contract.includes(q)) res.push({ date: d, category: c, item: i }); });
-        }));
-        return res.reverse();
-    }, [q, appData]);
+        const q = query.toLowerCase();
+        Object.entries(appData).forEach(([date, dayData]) => {
+            Object.entries(dayData).forEach(([cat, items]) => {
+                (items as EquipmentItem[]).forEach(item => {
+                    if (item.serial.toLowerCase().includes(q) || item.contract.toLowerCase().includes(q)) {
+                        res.push({ date, category: cat, item });
+                    }
+                });
+            });
+        });
+        return res.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [query, appData]);
 
     return (
-        <Modal onClose={onClose} title="Buscar" size="lg">
-            <input autoFocus value={q} onChange={e=>setQ(e.target.value)} placeholder="Digite..." className="w-full p-3 border rounded-lg mb-4"/>
-            <ul className="max-h-60 overflow-y-auto space-y-2">
-                {results.map((r, i) => (
-                    <li key={i} onClick={() => onSelect(r)} className="p-2 border rounded hover:bg-gray-50 cursor-pointer">
-                        <div className="font-bold">{r.date} - {r.category}</div>
-                        <div className="text-sm">{r.item.serial}</div>
-                    </li>
-                ))}
-            </ul>
-        </Modal>
-    );
-};
-
-const CalendarModal = ({ currentDate, onClose, onDateSelect }: { currentDate: Date, onClose: () => void, onDateSelect: (d: Date) => void }) => {
-    const [viewDate, setViewDate] = useState(new Date(currentDate));
-    const days = Array.from({ length: new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate() }, (_, i) => i + 1);
-    
-    return (
-        <Modal onClose={onClose} title="Calendário">
-             <div className="flex justify-between mb-4">
-                 <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth()-1)))}><IconChevronLeft/></button>
-                 <span className="font-bold">{viewDate.toLocaleString('pt-BR', { month: 'long', year: 'numeric' })}</span>
-                 <button onClick={() => setViewDate(new Date(viewDate.setMonth(viewDate.getMonth()+1)))}><IconChevronRight/></button>
+        <Modal onClose={onClose}>
+             <h3 className="text-xl font-bold text-gray-700 mb-4">Buscar Equipamento</h3>
+             <div className="relative mb-4">
+                 <IconSearch className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"/>
+                 <input 
+                    autoFocus
+                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400 outline-none" 
+                    placeholder="Digite Serial ou Contrato..."
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                 />
              </div>
-             <div className="grid grid-cols-7 gap-2">
-                 {days.map(d => (
-                     <button key={d} onClick={() => onDateSelect(new Date(viewDate.getFullYear(), viewDate.getMonth(), d))} 
-                     className={`p-2 rounded-full ${d === currentDate.getDate() && viewDate.getMonth() === currentDate.getMonth() ? 'bg-cyan-500 text-white' : 'hover:bg-gray-100'}`}>{d}</button>
+             <div className="max-h-60 overflow-y-auto space-y-2">
+                 {results.length === 0 && query.length > 1 && <p className="text-center text-gray-400 text-sm py-4">Nenhum resultado encontrado.</p>}
+                 {results.map((res, idx) => (
+                     <button key={idx} onClick={() => onSelect(res)} className="w-full text-left p-3 bg-white border border-gray-100 rounded-lg hover:bg-cyan-50 transition-colors shadow-sm">
+                         <div className="flex justify-between items-center mb-1">
+                             <span className="text-xs font-bold text-cyan-600 bg-cyan-50 px-1.5 py-0.5 rounded">{res.category}</span>
+                             <span className="text-xs text-gray-400">{res.date}</span>
+                         </div>
+                         <div className="text-sm text-gray-700">
+                             <span className="font-semibold">S:</span> {res.item.serial} <span className="mx-1 text-gray-300">|</span> <span className="font-semibold">C:</span> {res.item.contract}
+                         </div>
+                     </button>
                  ))}
              </div>
         </Modal>
-    )
-}
-
-const SettingsModal = ({ onClose, onClearData }: { onClose: () => void, onClearData: () => void }) => (
-    <Modal onClose={onClose} title="Configurações">
-        <button onClick={onClearData} className="w-full p-4 bg-red-50 text-red-600 rounded-lg flex gap-2 items-center"><IconTrash className="w-6 h-6"/> Limpar Dados</button>
-    </Modal>
-);
-
-const AboutModal = ({ onClose, onShareClick }: { onClose: () => void, onShareClick: () => void }) => (
-    <Modal onClose={onClose} title="Sobre">
-        <div className="text-center p-4">
-            <CustomMenuIcon className="w-20 h-20 mx-auto mb-2"/>
-            <h2 className="text-xl font-bold">Controle de Equipamentos</h2>
-            <p className="text-cyan-600">V0.0.1b</p>
-            <button onClick={onShareClick} className="mt-4 w-full p-3 bg-cyan-500 text-white rounded-lg">Compartilhar App</button>
-            <p className="mt-4 text-xs text-gray-400">Dono: Leo Luz</p>
-        </div>
-    </Modal>
-);
-
-const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData, allData: AppData, currentDate: string }) => {
-    const calc = (items: EquipmentItem[]) => items.reduce((acc, i) => acc + (isItemActive(i) ? (parseInt(i.qt)||1) : 0), 0);
-    const dayTotal = CATEGORIES.reduce((sum, c) => sum + calc(data[c]||[]), 0);
-    const monthTotal = Object.keys(allData).filter(k => k.startsWith(currentDate.slice(0,7))).reduce((sum, k) => sum + CATEGORIES.reduce((s, c) => s + calc(allData[k][c]||[]), 0), 0);
-
-    return (
-        <footer className="fixed bottom-0 w-full bg-white/80 backdrop-blur-xl border-t border-white/50 shadow-lg z-30 overflow-x-auto hide-scrollbar">
-            <div className="flex p-2 gap-2 min-w-max">
-                {CATEGORIES.map(c => (
-                    <div key={c} className="flex flex-col items-center bg-white/60 border border-white/60 rounded px-2 py-1 min-w-[70px]">
-                        <span className="text-[9px] font-bold text-gray-500 uppercase truncate w-full text-center">{c}</span>
-                        <span className="font-bold text-gray-800">{calc(data[c]||[])}</span>
-                    </div>
-                ))}
-                <div className="w-px bg-gray-300 mx-1"/>
-                <div className="flex flex-col items-center bg-blue-50/80 border border-blue-100 rounded px-3 min-w-[80px]">
-                    <span className="text-[9px] font-bold text-blue-600">DIA</span>
-                    <span className="font-bold text-blue-800">{dayTotal}</span>
-                </div>
-                <div className="flex flex-col items-center bg-green-50/80 border border-green-100 rounded px-3 min-w-[80px]">
-                    <span className="text-[9px] font-bold text-green-600">TOTAL</span>
-                    <span className="font-bold text-green-800">{monthTotal}</span>
-                </div>
-            </div>
-        </footer>
     );
 };
 

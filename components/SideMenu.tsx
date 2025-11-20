@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { IconCalendar, IconSave, IconExport, IconSettings, IconInfo, IconX, CustomMenuIcon } from './icons';
 
@@ -26,7 +27,7 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
         onClick={onClose}
       />
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-sky-50/90 text-gray-800 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-white/40 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white/80 text-gray-800 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-white/40 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -45,8 +46,8 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
                 onClick={() => onMenuClick(item.modal)} 
                 className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/60 text-lg transition-all text-left border border-transparent hover:border-white/50 active:scale-95 shadow-sm hover:shadow-md"
               >
-                <item.icon className="w-6 h-6 text-gray-500" />
-                <span className="font-bold tracking-wide text-gray-600">{item.label}</span>
+                <item.icon className="w-6 h-6 text-cyan-700" />
+                <span className="font-bold tracking-wide text-cyan-700">{item.label}</span>
               </button>
             ))}
           </nav>

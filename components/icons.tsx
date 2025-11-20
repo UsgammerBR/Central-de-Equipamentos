@@ -1,56 +1,69 @@
+
 import React from 'react';
 
-// New Custom Icon: 3D Streaming Box with White Glass Arc & Shadow
+// New Custom Icon: Galaxy S25 Style (Purple/Blue Gradient Container with 3D Box)
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      <filter id="arc-shadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
-      </filter>
-      <filter id="led-glow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-        <feMerge>
-          <feMergeNode in="coloredBlur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
+      {/* S25 Icon Background Gradient: Light Purple to Blue */}
+      <linearGradient id="s25Gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#e0c3fc" /> {/* Light Purple */}
+        <stop offset="50%" stopColor="#cbb4d4" />
+        <stop offset="100%" stopColor="#8ec5fc" /> {/* Soft Blue */}
+      </linearGradient>
+
+      {/* Glossy Shine Overlay */}
+      <linearGradient id="iconGloss" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="white" stopOpacity="0.6" />
+        <stop offset="40%" stopColor="white" stopOpacity="0.1" />
+        <stop offset="100%" stopColor="white" stopOpacity="0" />
+      </linearGradient>
+
+      {/* 3D Box Gradients */}
       <linearGradient id="blackBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#4b5563" /> {/* Gray-600 */}
-        <stop offset="100%" stopColor="#111827" /> {/* Gray-900 */}
+        <stop offset="0%" stopColor="#333" /> 
+        <stop offset="100%" stopColor="#000" />
       </linearGradient>
-       <linearGradient id="topFaceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#6b7280" />
-        <stop offset="100%" stopColor="#374151" />
+      <linearGradient id="topFaceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#555" />
+        <stop offset="100%" stopColor="#222" />
       </linearGradient>
+      
+      {/* Texture Pattern */}
+      <pattern id="boxTexture" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+         <rect width="2" height="2" fill="#000" opacity="0.2" />
+         <rect x="2" y="2" width="2" height="2" fill="#000" opacity="0.2" />
+      </pattern>
+
+      <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#000" floodOpacity="0.3"/>
+      </filter>
     </defs>
     
-    {/* White Glass Arc with Shadow */}
-    <path 
-      d="M 15 50 A 35 35 0 1 1 85 50" 
-      fill="none" 
-      stroke="white" 
-      strokeWidth="5" 
-      strokeLinecap="round"
-      filter="url(#arc-shadow)"
-      opacity="0.9"
-    />
+    {/* Icon Container (Squircle) */}
+    <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#s25Gradient)" filter="url(#dropShadow)" />
     
-    {/* 3D Streaming Box */}
-    <g transform="translate(15, 25) scale(0.7)">
-        {/* Left Face (Darker) */}
-        <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#blackBoxGrad)" stroke="#000" strokeWidth="0.5" />
+    {/* Glossy Shine on Container */}
+    <path d="M 5 27 Q 50 5 95 27 V 27 A 22 22 0 0 1 95 27 H 5 A 22 22 0 0 0 5 27 Z" fill="url(#iconGloss)" opacity="0.5" />
+
+    {/* 3D Textured Box (Centered inside) */}
+    <g transform="translate(25, 25) scale(0.5)">
+        {/* Left Face */}
+        <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#blackBoxGrad)" stroke="#111" strokeWidth="0.5" />
+        <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#boxTexture)" opacity="0.3" />
         
-        {/* Right Face (Darkest) */}
-        <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="#000000" stroke="#000" strokeWidth="0.5" />
+        {/* Right Face */}
+        <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="#111" stroke="#000" strokeWidth="0.5" />
+        <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="url(#boxTexture)" opacity="0.5" />
         
-        {/* Top Face (Lighter) */}
-        <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="url(#topFaceGrad)" stroke="#1f2937" strokeWidth="0.5" />
+        {/* Top Face */}
+        <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="url(#topFaceGrad)" stroke="#333" strokeWidth="0.5" />
         
         {/* Blue LED Light */}
-        <circle cx="85" cy="48" r="3" fill="#06b6d4" filter="url(#led-glow)" />
+        <circle cx="85" cy="48" r="4" fill="#06b6d4" filter="blur(1px)" />
         
-        {/* Glossy Reflection on Top */}
-        <path d="M10 30 L50 5 L90 30" fill="none" stroke="white" strokeWidth="2" opacity="0.1" />
+        {/* Edge Highlight */}
+        <path d="M0 30 L50 60 L100 30" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
     </g>
   </svg>
 );
@@ -128,7 +141,6 @@ export const IconSearch = ({ className = 'w-6 h-6' }: { className?: string }) =>
   </svg>
 );
 
-// Modern Clipboard
 export const IconClipboard = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24">
       <path d="M19,3h-4.18C14.4,1.84,13.3,1,12,1S9.6,1.84,9.18,3H5C3.9,3,3,3.9,3,5v14c0,1.1,0.9,2,2,2h14c1.1,0,2-0.9,2-2V5 C21,3.9,20.1,3,19,3z M12,2.75c0.41,0,0.75,0.34,0.75,0.75s-0.34,0.75-0.75,0.75S11.25,3.91,11.25,3.5S11.59,2.75,12,2.75z M19,19 H5V5h14V19z"/>
@@ -145,7 +157,6 @@ export const IconCamera = ({ className = 'w-6 h-6' }: { className?: string }) =>
   </svg>
 );
 
-// Minimalist Modern Gallery (Updated)
 export const IconGallery = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
