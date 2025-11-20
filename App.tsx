@@ -104,9 +104,43 @@ const isItemActive = (item: EquipmentItem): boolean => {
     return (item.qt && item.qt.trim() !== '') || (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
 };
 
+// --- ERROR BOUNDARY ---
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Algo deu errado.</h1>
+          <p className="text-gray-600 mb-4">Por favor, recarregue a página.</p>
+          <pre className="text-xs bg-gray-100 p-2 rounded text-left overflow-auto">{this.state.error?.toString()}</pre>
+          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">Recarregar</button>
+        </div>
+      )
+    }
+    return this.props.children;
+  }
+}
+
 // --- MAIN APP COMPONENT ---
 
-const App = () => {
+const AppContent = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appData, dispatch] = useReducer(dataReducer, {});
@@ -286,11 +320,12 @@ const App = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-200 to-slate-300 text-gray-800 font-sans pb-32">
+    // Updated Background: Glossy White Gradient
+    <div className="min-h-screen bg-gradient-to-b from-white via-blue-50 to-slate-100 text-gray-800 font-sans pb-32">
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={handleOpenModal}/>
       
       {/* Header: Milky Glass Theme */}
-      <header className="sticky top-0 z-30 bg-white/60 backdrop-blur-md shadow-sm border-b border-white/40 pt-3 pb-2 px-4">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl shadow-sm border-b border-white/60 pt-3 pb-2 px-4">
         <div className="container mx-auto">
             <div className="flex justify-between items-center mb-2">
                 {/* Menu Icon */}
@@ -303,7 +338,7 @@ const App = () => {
                 </button>
 
                 {/* Action Buttons: Recessed Light Box for Depth */}
-                <div className="flex items-center gap-0.5 bg-slate-50 shadow-[inset_0_2px_4px_rgba(0,0,0,0.1)] p-1.5 rounded-2xl border border-white/50">
+                <div className="flex items-center gap-0.5 bg-slate-100 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] p-1.5 rounded-2xl border border-white">
                     <ActionButton onClick={handleAddItem}><IconPlus className="w-5 h-5" /></ActionButton>
                     <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-5 h-5" /></ActionButton>
                     {isGlobalDeleteMode && hasSelectedItems && (
@@ -318,8 +353,8 @@ const App = () => {
 
             {/* Date: Centered below */}
             <div className="text-center">
-                <div className="inline-block px-6 py-1 rounded-full bg-white/40 border border-white/50 backdrop-blur-sm shadow-sm">
-                    <div className="text-lg font-extrabold text-gray-700 tracking-tight">
+                <div className="inline-block px-6 py-1 rounded-full bg-white/50 border border-white/60 backdrop-blur-md shadow-sm">
+                    <div className="text-lg font-extrabold text-gray-600 tracking-tight">
                         {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                 </div>
@@ -381,6 +416,12 @@ const App = () => {
   );
 };
 
+const App = () => (
+    <ErrorBoundary>
+        <AppContent />
+    </ErrorBoundary>
+)
+
 /* --- SUB-COMPONENTS & MODALS --- */
 
 const ActionButton = ({ children, onClick, isPrimary = false, isDanger = false }: { children?: React.ReactNode; onClick?: () => void; isPrimary?: boolean; isDanger?: boolean; }) => (
@@ -410,8 +451,8 @@ const EquipmentSection: React.FC<{
 }> = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }) => {
     return (
         <div className="mb-6" onClick={onActivate}>
-            <h2 className="text-2xl font-extrabold text-gray-500 uppercase tracking-widest drop-shadow-md mb-2 ml-2">{category}</h2>
-            <section className={`p-2 bg-white/40 backdrop-blur-md border border-white/60 rounded-xl shadow-sm transition-all ${isActive ? 'ring-2 ring-white/50' : ''}`}>
+            <h2 className="text-xl font-bold text-gray-500 uppercase tracking-widest drop-shadow-sm mb-2 ml-2">{category}</h2>
+            <section className={`p-2 bg-white/60 backdrop-blur-lg border border-white/80 rounded-xl shadow-sm transition-all ${isActive ? 'ring-2 ring-white/60' : ''}`}>
                 <div className="space-y-2">
                     {items.map(item => (
                         <EquipmentRow 
@@ -436,7 +477,7 @@ const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentIt
     const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
     
     return (
-        <div className={`flex items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? 'bg-red-500/20' : 'bg-white/30'}`}>
+        <div className={`flex items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? 'bg-red-500/10' : 'bg-white/40'}`}>
             {isDeleteMode && <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="form-checkbox h-5 w-5 rounded bg-gray-100 border-gray-300 text-cyan-600 mr-1 flex-shrink-0"/>}
             
             {/* Input Container: Optimized for Mobile Widths */}
@@ -466,8 +507,8 @@ const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentIt
 
                 {/* Buttons: Tightly Packed */}
                 <div className="flex-shrink-0 flex items-center justify-center gap-0.5 ml-0.5">
-                    <button onClick={onOpenCamera} className="w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md active:scale-95 text-gray-700"><IconCamera className="w-4 h-4"/></button>
-                    <button onClick={onViewGallery} className="relative w-7 h-7 flex items-center justify-center bg-gray-200 hover:bg-gray-300 rounded-md active:scale-95 disabled:opacity-50 text-gray-700" disabled={item.photos.length === 0}>
+                    <button onClick={onOpenCamera} className="w-7 h-7 flex items-center justify-center bg-white/80 hover:bg-white rounded-md active:scale-95 text-gray-600 shadow-sm border border-gray-200"><IconCamera className="w-4 h-4"/></button>
+                    <button onClick={onViewGallery} className="relative w-7 h-7 flex items-center justify-center bg-white/80 hover:bg-white rounded-md active:scale-95 disabled:opacity-50 text-gray-600 shadow-sm border border-gray-200" disabled={item.photos.length === 0}>
                         <IconGallery className="w-4 h-4"/>
                         {item.photos.length > 0 && <span className="absolute -top-1 -right-1 flex justify-center items-center w-3 h-3 text-[9px] font-bold text-white bg-cyan-500 rounded-full shadow-sm">{item.photos.length}</span>}
                     </button>
@@ -480,7 +521,7 @@ const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentIt
 // Input: Zero padding + Centered text to ensure no hidden characters on mobile
 const InputWithLabel = ({ onCopy, ...rest }: React.InputHTMLAttributes<HTMLInputElement> & { onCopy?: () => void }) => (
     <div className="relative w-full h-full">
-        <input {...rest} className="w-full h-9 bg-white/90 border border-gray-300 rounded-md py-0 px-0 text-center focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-colors placeholder-gray-400 text-gray-800 text-sm font-semibold truncate"/>
+        <input {...rest} className="w-full h-9 bg-white/80 border border-gray-200 rounded-md py-0 px-0 text-center focus:outline-none focus:ring-1 focus:ring-cyan-500 focus:border-cyan-500 transition-colors placeholder-gray-400 text-gray-700 text-sm font-medium truncate shadow-sm"/>
         {onCopy && <button onClick={onCopy} className="absolute inset-y-0 right-0 flex items-center pr-0.5 text-gray-400 hover:text-cyan-600 active:scale-90 transition-all"><IconClipboard className="w-3 h-3"/></button>}
     </div>
 );
@@ -488,9 +529,9 @@ const InputWithLabel = ({ onCopy, ...rest }: React.InputHTMLAttributes<HTMLInput
 // --- MODAL COMPONENTS (White/Milky Glass Theme) ---
 
 const Modal = ({ children, onClose, title, size = 'md' }: { children?: React.ReactNode, onClose: () => void, title: string, size?: string }) => (
-    <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
-      <div className={`bg-white/90 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl w-full ${size === 'lg' ? 'max-w-lg' : 'max-w-md'} p-6 animate-slide-in-up text-gray-800`} onClick={e => e.stopPropagation()}>
-        <div className="flex justify-between items-center mb-4 border-b border-gray-200/50 pb-2">
+    <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-sm flex justify-center items-center z-50 p-4 animate-fade-in" onClick={onClose}>
+      <div className={`bg-white/95 backdrop-blur-2xl border border-white rounded-2xl shadow-2xl w-full ${size === 'lg' ? 'max-w-lg' : 'max-w-md'} p-6 animate-slide-in-up text-gray-800`} onClick={e => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-4 border-b border-gray-100 pb-2">
           <h2 className="text-xl font-bold text-gray-700">{title}</h2>
           <button onClick={onClose} className="p-1.5 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-500"><IconX className="w-5 h-5"/></button>
         </div>
@@ -500,8 +541,8 @@ const Modal = ({ children, onClose, title, size = 'md' }: { children?: React.Rea
 );
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div className="fixed inset-0 bg-slate-500/30 backdrop-blur-sm flex justify-center items-center z-[60] p-4" onClick={onCancel}>
-        <div className="bg-white/95 backdrop-blur-xl border border-white/60 rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 bg-slate-500/20 backdrop-blur-sm flex justify-center items-center z-[60] p-4" onClick={onCancel}>
+        <div className="bg-white/95 backdrop-blur-2xl border border-white rounded-2xl shadow-2xl w-full max-w-sm p-6 animate-slide-in-up" onClick={e => e.stopPropagation()}>
             <p className="text-lg mb-6 text-center font-medium text-gray-700">{message}</p>
             <div className="flex gap-4">
                 <button onClick={onCancel} className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-600 font-bold">Cancelar</button>
@@ -733,20 +774,20 @@ const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData, allDat
     const monthTotal = Object.keys(allData).filter(k => k.startsWith(currentDate.slice(0,7))).reduce((sum, k) => sum + CATEGORIES.reduce((s, c) => s + calc(allData[k][c]||[]), 0), 0);
 
     return (
-        <footer className="fixed bottom-0 w-full bg-white/90 backdrop-blur-xl border-t shadow-lg z-30 overflow-x-auto hide-scrollbar">
+        <footer className="fixed bottom-0 w-full bg-white/80 backdrop-blur-xl border-t border-white/50 shadow-lg z-30 overflow-x-auto hide-scrollbar">
             <div className="flex p-2 gap-2 min-w-max">
                 {CATEGORIES.map(c => (
-                    <div key={c} className="flex flex-col items-center bg-white/50 border rounded px-2 py-1 min-w-[70px]">
+                    <div key={c} className="flex flex-col items-center bg-white/60 border border-white/60 rounded px-2 py-1 min-w-[70px]">
                         <span className="text-[9px] font-bold text-gray-500 uppercase truncate w-full text-center">{c}</span>
                         <span className="font-bold text-gray-800">{calc(data[c]||[])}</span>
                     </div>
                 ))}
                 <div className="w-px bg-gray-300 mx-1"/>
-                <div className="flex flex-col items-center bg-blue-50 border border-blue-100 rounded px-3 min-w-[80px]">
+                <div className="flex flex-col items-center bg-blue-50/80 border border-blue-100 rounded px-3 min-w-[80px]">
                     <span className="text-[9px] font-bold text-blue-600">DIA</span>
                     <span className="font-bold text-blue-800">{dayTotal}</span>
                 </div>
-                <div className="flex flex-col items-center bg-green-50 border border-green-100 rounded px-3 min-w-[80px]">
+                <div className="flex flex-col items-center bg-green-50/80 border border-green-100 rounded px-3 min-w-[80px]">
                     <span className="text-[9px] font-bold text-green-600">TOTAL</span>
                     <span className="font-bold text-green-800">{monthTotal}</span>
                 </div>
