@@ -1,50 +1,57 @@
 import React from 'react';
 
-// New Custom Icon: Realistic 3D Box with Tape and Red Glass Frame
+// New Custom Icon: 3D Streaming Box with White Glass Arc & Shadow
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      <filter id="glass-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" />
+      <filter id="arc-shadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#000" floodOpacity="0.3"/>
       </filter>
-      <linearGradient id="boxGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#dcb482" />
-        <stop offset="100%" stopColor="#a67c52" />
+      <filter id="led-glow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+        <feMerge>
+          <feMergeNode in="coloredBlur" />
+          <feMergeNode in="SourceGraphic" />
+        </feMerge>
+      </filter>
+      <linearGradient id="blackBoxGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#4b5563" /> {/* Gray-600 */}
+        <stop offset="100%" stopColor="#111827" /> {/* Gray-900 */}
+      </linearGradient>
+       <linearGradient id="topFaceGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#6b7280" />
+        <stop offset="100%" stopColor="#374151" />
       </linearGradient>
     </defs>
     
-    {/* 3D Box Construction (Isometric) */}
-    <g transform="translate(15, 20) scale(0.7)">
-        {/* Left Face */}
-        <path d="M0 25 L50 50 L50 100 L0 75 Z" fill="#c69c6d" stroke="#8d6e63" strokeWidth="1" />
-        {/* Right Face */}
-        <path d="M50 50 L100 25 L100 75 L50 100 Z" fill="#a67c52" stroke="#6d4c41" strokeWidth="1" />
-        {/* Top Face */}
-        <path d="M0 25 L50 0 L100 25 L50 50 Z" fill="#e6ccb2" stroke="#b08968" strokeWidth="1" />
-
-        {/* Tape Details */}
-        {/* Center Cross Tape on Top */}
-        <path d="M25 12.5 L75 37.5" stroke="#d7ccc8" strokeWidth="8" opacity="0.7" transform="rotate(-2 50 25)" />
-        <path d="M25 37.5 L75 12.5" stroke="#d7ccc8" strokeWidth="8" opacity="0.7" transform="rotate(-2 50 25)" />
-        
-        {/* Vertical Tape on Front Seam */}
-        <path d="M50 50 L50 100" stroke="#d7ccc8" strokeWidth="6" opacity="0.5" />
-        
-        {/* Barcode Label on Left Face */}
-        <g transform="translate(10, 45) skewY(26.5)">
-            <rect width="30" height="20" fill="#fff" rx="1" opacity="0.9"/>
-            <path d="M5 5 H25 M5 8 H25 M5 11 H25 M5 15 H25" stroke="#000" strokeWidth="1" />
-        </g>
-    </g>
-
-    {/* Red Glass Frame - Surrounding the box */}
-    <rect x="5" y="5" width="90" height="90" rx="18" fill="none" stroke="#ef4444" strokeWidth="4" />
-    {/* Glass Highlight/Sheen */}
-    <path d="M10 10 Q 50 10 90 10 L 90 15 Q 50 15 10 15 Z" fill="white" opacity="0.3" />
-    <path d="M10 10 Q 10 50 10 90 L 15 90 Q 15 50 15 10 Z" fill="white" opacity="0.2" />
+    {/* White Glass Arc with Shadow */}
+    <path 
+      d="M 15 50 A 35 35 0 1 1 85 50" 
+      fill="none" 
+      stroke="white" 
+      strokeWidth="5" 
+      strokeLinecap="round"
+      filter="url(#arc-shadow)"
+      opacity="0.9"
+    />
     
-    {/* Glass Surface Hint */}
-    <circle cx="80" cy="20" r="5" fill="white" opacity="0.2" />
+    {/* 3D Streaming Box */}
+    <g transform="translate(15, 25) scale(0.7)">
+        {/* Left Face (Darker) */}
+        <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#blackBoxGrad)" stroke="#000" strokeWidth="0.5" />
+        
+        {/* Right Face (Darkest) */}
+        <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="#000000" stroke="#000" strokeWidth="0.5" />
+        
+        {/* Top Face (Lighter) */}
+        <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="url(#topFaceGrad)" stroke="#1f2937" strokeWidth="0.5" />
+        
+        {/* Blue LED Light */}
+        <circle cx="85" cy="48" r="3" fill="#06b6d4" filter="url(#led-glow)" />
+        
+        {/* Glossy Reflection on Top */}
+        <path d="M10 30 L50 5 L90 30" fill="none" stroke="white" strokeWidth="2" opacity="0.1" />
+    </g>
   </svg>
 );
 
