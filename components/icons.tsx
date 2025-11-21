@@ -1,19 +1,21 @@
 import React from 'react';
 
-// Galaxy S25 Style Icon with Purple-Blue-Pink Gradient inside
+// Milky Glass 3D Icon with Split Gradient (Dark Purple -> Light Purple | Light Blue -> Dark Blue)
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#4c1d95" /> 
-        <stop offset="40%" stopColor="#a855f7" /> 
-        <stop offset="60%" stopColor="#3b82f6" /> 
-        <stop offset="100%" stopColor="#ec4899" /> 
+      {/* Split Gradient: Dark Purple -> Milky Purple | Milky Blue -> Dark Blue */}
+      <linearGradient id="milkyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#4c1d95" />   {/* Dark Purple */}
+        <stop offset="45%" stopColor="#e9d5ff" />  {/* Milky Light Purple */}
+        <stop offset="55%" stopColor="#bfdbfe" />  {/* Milky Light Blue */}
+        <stop offset="100%" stopColor="#172554" /> {/* Dark Blue */}
       </linearGradient>
 
-      <filter id="projectedShadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-        <feOffset dx="0" dy="6" result="offsetblur"/>
+      {/* Strong Projected Shadow for 3D effect */}
+      <filter id="strongShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+        <feOffset dx="0" dy="4" result="offsetblur"/>
         <feFlood floodColor="#000" floodOpacity="0.5"/>
         <feComposite in2="offsetblur" operator="in"/>
         <feMerge>
@@ -22,19 +24,35 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
         </feMerge>
       </filter>
 
+      {/* 3D Box Content Gradients */}
       <linearGradient id="boxBody" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#222" />
+        <stop offset="0%" stopColor="#333" />
         <stop offset="100%" stopColor="#000" />
       </linearGradient>
     </defs>
     
-    <g filter="url(#projectedShadow)">
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#bgGrad)" stroke="white" strokeWidth="3" strokeOpacity="0.9" />
-        <path d="M 5 35 Q 50 5 95 35" fill="none" stroke="white" strokeWidth="2" opacity="0.6" />
+    <g filter="url(#strongShadow)">
+        {/* Main Container shape with Gradient */}
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#milkyGrad)" />
+        
+        {/* Milky White Overlay for "Leitoso" effect */}
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="white" fillOpacity="0.15" />
+
+        {/* Glass Bevel / Border */}
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="3" strokeOpacity="0.8" />
+        
+        {/* Top Glare */}
+        <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="2" opacity="0.5" />
+        
+        {/* The 3D Streaming Box Content */}
         <g transform="translate(25, 30) scale(0.5)">
+            {/* Top Face */}
             <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#boxBody)" stroke="#444" strokeWidth="1" />
+            {/* Right Face */}
             <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="black" stroke="#111" strokeWidth="1" />
+            {/* Left Face */}
             <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="#1a1a1a" stroke="#555" strokeWidth="1" />
+            {/* Blue LED */}
             <circle cx="85" cy="48" r="6" fill="#3b82f6" filter="blur(2px)" />
             <circle cx="85" cy="48" r="2" fill="#ffffff" />
         </g>

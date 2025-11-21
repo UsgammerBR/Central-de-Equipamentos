@@ -134,9 +134,14 @@ const isItemActive = (item: EquipmentItem): boolean => {
 interface ErrorBoundaryProps { children?: React.ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null };
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  
   render() {
     if (this.state.hasError) {
       return <div className="p-8 text-center text-red-600"><h1>Erro inesperado</h1><button onClick={() => window.location.reload()}>Recarregar</button></div>;
@@ -224,12 +229,11 @@ const AppContent = () => {
   };
 
   return (
-    // REVERTED: White/Milky Gloss Gradient
     <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-700 font-sans pb-32">
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }}/>
       
       <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-xl pt-4 pb-2 px-4 relative overflow-hidden shadow-sm border-b border-white/10">
-        {/* Watermark: Restored to lighter gray/white look compatible with white theme */}
+        {/* Watermark */}
         <div className="absolute top-6 inset-x-0 flex items-center justify-center pointer-events-none z-0">
              <span className="text-3xl font-black text-slate-300 opacity-60 uppercase tracking-widest whitespace-nowrap transform scale-150 drop-shadow-sm blur-[0.5px]">EQUIPAMENTOS</span>
         </div>
@@ -241,14 +245,14 @@ const AppContent = () => {
                 </button>
 
                 <div className="flex items-center gap-3">
-                    {/* Reverted to larger, light buttons */}
-                    <ActionButton onClick={handleAddItem}><IconPlus className="w-5 h-5" /></ActionButton>
-                    <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-5 h-5" /></ActionButton>
+                    {/* Smaller, transparent buttons */}
+                    <ActionButton onClick={handleAddItem}><IconPlus className="w-4 h-4" /></ActionButton>
+                    <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-4 h-4" /></ActionButton>
                     {isGlobalDeleteMode && Object.values(selectedItems).reduce<number>((acc, items: string[]) => acc + items.length, 0) > 0 && (
-                    <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true}><IconTrash className="w-5 h-5" /></ActionButton>
+                    <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true}><IconTrash className="w-4 h-4" /></ActionButton>
                     )}
-                    <ActionButton onClick={handleUndo}><IconUndo className="w-5 h-5" /></ActionButton>
-                    <ActionButton onClick={() => setIsSearchActive(!isSearchActive)}><IconSearch className="w-5 h-5" /></ActionButton>
+                    <ActionButton onClick={handleUndo}><IconUndo className="w-4 h-4" /></ActionButton>
+                    <ActionButton onClick={() => setIsSearchActive(!isSearchActive)}><IconSearch className="w-4 h-4" /></ActionButton>
                 </div>
             </div>
 
@@ -326,10 +330,11 @@ export default App;
 const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
     <button 
         onClick={onClick} 
-        className={`w-10 h-10 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md border border-white/20 ${
+        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md border border-white/20 ${
             isPrimary ? 'bg-cyan-500 text-white' : 
             isDanger ? 'bg-red-500/20 text-red-500' :
-            'bg-white text-slate-600 hover:bg-slate-50' // Restored light style
+            // Increased transparency (bg-white/10) and high blur to show watermark
+            'bg-white/10 text-slate-600 hover:bg-white/20 backdrop-blur-md' 
         }`}
     >
         {children}
@@ -338,7 +343,6 @@ const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
 
 const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }: any) => (
     <div onClick={onActivate} className="group">
-        {/* Dark Gray Text */}
         <h2 className={`text-lg font-bold text-slate-700 drop-shadow-sm uppercase tracking-widest mb-2 ml-2 transition-colors ${isActive ? 'text-cyan-600' : ''}`}>{category}</h2>
         <section className={`p-2 bg-white/40 backdrop-blur-lg border-t border-l border-white/60 border-b border-r border-white/20 rounded-xl shadow-lg transition-all duration-300 ${isActive ? 'ring-1 ring-cyan-200/60 scale-[1.01]' : ''}`}>
             <div className="space-y-2">
