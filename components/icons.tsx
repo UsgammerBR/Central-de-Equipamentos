@@ -1,21 +1,22 @@
 
 import React from 'react';
 
-// NEW: Saturated 3D Streaming Box with Strong Shadow and Glass Effect
+// NEW: Galaxy S25 Style Icon with Purple-Blue-Pink Gradient
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      {/* Deep Saturated Blue-Purple Gradient */}
+      {/* Purple -> Blue -> Pink Gradient */}
       <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#4338ca" /> {/* Indigo-700 */}
-        <stop offset="100%" stopColor="#312e81" /> {/* Indigo-900 */}
+        <stop offset="0%" stopColor="#a855f7" /> {/* Purple */}
+        <stop offset="50%" stopColor="#3b82f6" /> {/* Blue */}
+        <stop offset="100%" stopColor="#ec4899" /> {/* Pink */}
       </linearGradient>
 
       {/* Projected Drop Shadow */}
       <filter id="projectedShadow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
-        <feOffset dx="0" dy="8" result="offsetblur"/>
-        <feFlood floodColor="#000" floodOpacity="0.6"/>
+        <feOffset dx="0" dy="6" result="offsetblur"/>
+        <feFlood floodColor="#000" floodOpacity="0.5"/>
         <feComposite in2="offsetblur" operator="in"/>
         <feMerge>
           <feMergeNode/>
@@ -32,10 +33,10 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
     
     <g filter="url(#projectedShadow)">
         {/* Container: Squircle with Gradient and Glass Border */}
-        <rect x="5" y="5" width="90" height="90" rx="24" fill="url(#bgGrad)" stroke="white" strokeWidth="2" strokeOpacity="0.5" />
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#bgGrad)" stroke="white" strokeWidth="2" strokeOpacity="0.6" />
         
         {/* Glass Shine */}
-        <path d="M 5 40 Q 50 10 95 40" fill="none" stroke="white" strokeWidth="2" opacity="0.3" />
+        <path d="M 5 35 Q 50 5 95 35" fill="none" stroke="white" strokeWidth="2" opacity="0.4" />
         
         {/* 3D Streaming Box Object */}
         <g transform="translate(25, 30) scale(0.5)">
