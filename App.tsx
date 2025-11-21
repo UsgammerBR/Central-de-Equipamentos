@@ -99,10 +99,11 @@ const isItemActive = (item: EquipmentItem): boolean => {
 interface ErrorBoundaryProps { children?: React.ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  state: ErrorBoundaryState = { hasError: false, error: null };
+
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false, error: null };
   }
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   render() {
@@ -185,12 +186,12 @@ const AppContent = () => {
   };
 
   const handleConfirmGlobalDelete = () => {
-      const totalSelected = Object.values(selectedItems).reduce((sum, ids) => sum + ids.length, 0);
+      const totalSelected = Object.values(selectedItems).reduce((sum: number, ids: string[]) => sum + ids.length, 0);
       if (totalSelected > 0) {
         setConfirmation({
             message: `Apagar ${totalSelected} item(s)?`,
             onConfirm: () => {
-                Object.entries(selectedItems).forEach(([cat, ids]) => {
+                Object.entries(selectedItems).forEach(([cat, ids]: [string, string[]]) => {
                     if (ids.length > 0) dispatchWithHistory({ type: 'DELETE_ITEMS', payload: { date: formattedDate, category: cat as EquipmentCategory, itemIds: ids } });
                 });
                 handleToggleDeleteMode(); 
@@ -200,31 +201,36 @@ const AppContent = () => {
   };
 
   return (
-    // ICE GLASS THEME: Transparent White to Ice Blue
-    <div className="min-h-screen bg-gradient-to-b from-white/95 via-slate-50 to-cyan-50 text-slate-700 font-sans pb-32">
+    // Purple (Top) -> Blue -> Pink (Bottom) Gradient
+    <div className="min-h-screen bg-gradient-to-b from-purple-300 via-blue-300 to-pink-300 text-slate-700 font-sans pb-32">
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }}/>
       
-      <header className="sticky top-0 z-30 bg-white/10 backdrop-blur-xl pt-4 pb-2 px-4 border-b border-white/20">
-        <div className="container mx-auto">
+      <header className="sticky top-0 z-30 bg-white/20 backdrop-blur-xl pt-4 pb-2 px-4 border-b border-white/30 relative overflow-hidden">
+        {/* Watermark Text - Behind Content */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 opacity-10">
+             <span className="text-3xl font-black text-slate-900 uppercase tracking-widest whitespace-nowrap transform -rotate-2">C.Equipamentos</span>
+        </div>
+
+        <div className="container mx-auto relative z-10">
             <div className="flex justify-between items-center mb-2">
                 <button onClick={() => setIsMenuOpen(true)} className="active:scale-95 transition-transform drop-shadow-xl">
                     <CustomMenuIcon className="w-14 h-14" />
                 </button>
 
-                <div className="flex items-center gap-3">
-                    <ActionButton onClick={handleAddItem}><IconPlus className="w-3.5 h-3.5" /></ActionButton>
-                    <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-3.5 h-3.5" /></ActionButton>
-                    {isGlobalDeleteMode && Object.values(selectedItems).reduce((acc, items) => acc + items.length, 0) > 0 && (
-                    <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true}><IconTrash className="w-3.5 h-3.5" /></ActionButton>
+                <div className="flex items-center gap-2">
+                    <ActionButton onClick={handleAddItem}><IconPlus className="w-3 h-3" /></ActionButton>
+                    <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-3 h-3" /></ActionButton>
+                    {isGlobalDeleteMode && Object.values(selectedItems).reduce((acc: number, items: string[]) => acc + items.length, 0) > 0 && (
+                    <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true}><IconTrash className="w-3 h-3" /></ActionButton>
                     )}
-                    <ActionButton onClick={handleUndo}><IconUndo className="w-3.5 h-3.5" /></ActionButton>
-                    <ActionButton onClick={() => setIsSearchActive(!isSearchActive)}><IconSearch className="w-3.5 h-3.5" /></ActionButton>
+                    <ActionButton onClick={handleUndo}><IconUndo className="w-3 h-3" /></ActionButton>
+                    <ActionButton onClick={() => setIsSearchActive(!isSearchActive)}><IconSearch className="w-3 h-3" /></ActionButton>
                 </div>
             </div>
 
             <div className="text-center">
-                <div className="inline-block px-6 py-1 rounded-full bg-white/20 border border-white/40 backdrop-blur-xl shadow-sm">
-                    <div className="text-lg font-extrabold text-slate-400 tracking-tight drop-shadow-sm">
+                <div className="inline-block px-6 py-1 rounded-full bg-white/30 border border-white/40 backdrop-blur-md shadow-sm">
+                    <div className="text-lg font-extrabold text-slate-700 tracking-tight drop-shadow-sm shadow-white">
                         {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                 </div>
@@ -238,21 +244,21 @@ const AppContent = () => {
                 key={`${formattedDate}-${category}`} 
                 category={category} 
                 items={currentDayData[category] || []}
-                onUpdateItem={(item) => handleUpdateItem(category, item)}
-                onViewGallery={(item) => setGalleryItem(item)}
+                onUpdateItem={(item: EquipmentItem) => handleUpdateItem(category, item)}
+                onViewGallery={(item: EquipmentItem) => setGalleryItem(item)}
                 isDeleteMode={isGlobalDeleteMode}
                 selectedItems={selectedItems[category] || []}
-                onToggleSelect={(id) => setSelectedItems(prev => ({ ...prev, [category]: prev[category]?.includes(id) ? prev[category].filter(i => i !== id) : [...(prev[category]||[]), id] }))}
+                onToggleSelect={(id: string) => setSelectedItems(prev => ({ ...prev, [category]: prev[category]?.includes(id) ? prev[category].filter(i => i !== id) : [...(prev[category]||[]), id] }))}
                 isActive={category === activeCategory}
                 onActivate={() => setActiveCategory(category)}
-                onOpenCamera={(item) => setCameraModalItem(item)}
+                onOpenCamera={(item: EquipmentItem) => setCameraModalItem(item)}
             />
         ))}
       </main>
 
       <SummaryFooter data={currentDayData} allData={appData} currentDate={formattedDate} />
             
-      {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} onUpdatePhotos={(photos) => {
+      {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} onUpdatePhotos={(photos: string[]) => {
         const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === galleryItem.id)) as EquipmentCategory;
         if(cat) {
             const updated = { ...galleryItem, photos };
@@ -261,7 +267,7 @@ const AppContent = () => {
         }
       }} setConfirmation={setConfirmation} />}
       
-      {cameraModalItem && <CameraModal onClose={() => setCameraModalItem(null)} onCapture={(photo, code) => {
+      {cameraModalItem && <CameraModal onClose={() => setCameraModalItem(null)} onCapture={(photo: string, code: string) => {
            const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
            if (cat) {
                const updated = { ...cameraModalItem };
@@ -272,13 +278,13 @@ const AppContent = () => {
            setCameraModalItem(null);
       }} />}
 
-      {activeModal === 'calendar' && <CalendarModal currentDate={currentDate} onClose={() => setActiveModal(null)} onDateSelect={d => { setCurrentDate(d); setActiveModal(null); }}/>}
+      {activeModal === 'calendar' && <CalendarModal currentDate={currentDate} onClose={() => setActiveModal(null)} onDateSelect={(d: Date) => { setCurrentDate(d); setActiveModal(null); }}/>}
       {activeModal === 'save' && <DownloadModal data={currentDayData} date={formattedDate} onClose={() => setActiveModal(null)} />}
       {activeModal === 'export' && <ShareModal data={currentDayData} date={formattedDate} onClose={() => setActiveModal(null)} />}
       {activeModal === 'settings' && <SettingsModal onClose={() => setActiveModal(null)} onClearData={() => setConfirmation({ message: "Apagar tudo permanentemente?", onConfirm: () => { dispatchWithHistory({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); } })}/>}
       {activeModal === 'about' && <AboutModal onClose={() => setActiveModal(null)} onShareClick={() => setActiveModal('shareApp')}/>}
       {activeModal === 'shareApp' && <ShareModal isSharingApp onClose={() => setActiveModal(null)} />}
-      {isSearchActive && <SearchModal onClose={() => setIsSearchActive(false)} appData={appData} onSelect={(res) => { 
+      {isSearchActive && <SearchModal onClose={() => setIsSearchActive(false)} appData={appData} onSelect={(res: any) => { 
           const [y, m, d] = res.date.split('-'); 
           setCurrentDate(new Date(y, m-1, d)); 
           setIsSearchActive(false); 
@@ -296,10 +302,11 @@ export default App;
 const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
     <button 
         onClick={onClick} 
-        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:shadow-inner active:translate-y-0.5 shadow-md border ${
+        // Reduced size (w-6 h-6), Ice Color (bg-cyan-50), Shadow
+        className={`w-6 h-6 rounded-full flex items-center justify-center transition-all active:shadow-inner active:translate-y-0.5 shadow-md border ${
             isPrimary ? 'bg-cyan-500 border-cyan-600 text-white' : 
             isDanger ? 'bg-red-50 border-red-100 text-red-500' :
-            'bg-white border-white/80 text-cyan-400'
+            'bg-cyan-50/90 border-white/60 text-slate-600 hover:bg-white'
         }`}
     >
         {children}
@@ -308,9 +315,9 @@ const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
 
 const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }: any) => (
     <div onClick={onActivate}>
-        {/* White Text with Shadow */}
-        <h2 className="text-lg font-bold text-white drop-shadow-md uppercase tracking-widest mb-2 ml-2">{category}</h2>
-        <section className={`p-2 bg-white/30 backdrop-blur-lg border-t border-l border-white/60 border-b border-r border-white/20 rounded-xl shadow-lg transition-all duration-300 ${isActive ? 'ring-1 ring-white/60 scale-[1.01]' : ''}`}>
+        {/* Dark Gray Text with White Shadow for Contrast */}
+        <h2 className="text-lg font-bold text-slate-700 drop-shadow-sm shadow-white uppercase tracking-widest mb-2 ml-2">{category}</h2>
+        <section className={`p-2 bg-white/40 backdrop-blur-lg border-t border-l border-white/60 border-b border-r border-white/20 rounded-xl shadow-lg transition-all duration-300 ${isActive ? 'ring-1 ring-white/60 scale-[1.01]' : ''}`}>
             <div className="space-y-2">
                 {items.map((item: any) => (
                     <EquipmentRow 
@@ -365,11 +372,11 @@ const InputWithLabel = ({ placeholder, value, onChange, type = "text", maxLength
     <div className="relative group w-full h-full">
         <input
             type={type} value={value} onChange={onChange} placeholder={placeholder} maxLength={maxLength}
-            className="w-full h-8 bg-white/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] border border-white/60 rounded-md px-0 py-1 text-[10px] font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:bg-white placeholder-gray-400 transition-all text-center compact-input"
+            className="w-full h-8 bg-white/60 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] border border-white/40 rounded-md px-0 py-1 text-[10px] font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-purple-400 focus:bg-white placeholder-gray-500 transition-all text-center compact-input"
         />
         {onCopy && value && (
             <button onClick={onCopy} className="absolute right-0 top-0 h-full px-1 flex items-center justify-center opacity-50 hover:opacity-100 z-10">
-                <IconClipboard className="w-2.5 h-2.5 text-slate-500" />
+                <IconClipboard className="w-2.5 h-2.5 text-slate-600" />
             </button>
         )}
     </div>
@@ -386,21 +393,21 @@ const SummaryFooter = ({ data, allData, currentDate }: any) => {
     }, [allData, currentDate]);
 
     return (
-        <footer className="fixed bottom-0 left-0 w-full bg-white/60 backdrop-blur-xl border-t border-white/50 p-3 z-40 pb-safe">
+        <footer className="fixed bottom-0 left-0 w-full bg-white/40 backdrop-blur-xl border-t border-white/50 p-3 z-40 pb-safe">
             <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar snap-x">
                 {CATEGORIES.map(cat => (
-                    <div key={cat} className="flex-shrink-0 bg-white/40 border border-white/60 rounded-xl px-3 py-1 min-w-[90px] flex flex-col items-center shadow-sm">
-                        <span className="text-[8px] font-bold text-cyan-600 uppercase mb-0.5">{cat}</span>
-                        <span className="text-lg font-black text-cyan-800">{calc(data[cat]||[])}</span>
+                    <div key={cat} className="flex-shrink-0 bg-white/60 border border-white/60 rounded-xl px-3 py-1 min-w-[90px] flex flex-col items-center shadow-sm">
+                        <span className="text-[8px] font-bold text-slate-600 uppercase mb-0.5">{cat}</span>
+                        <span className="text-lg font-black text-slate-800">{calc(data[cat]||[])}</span>
                     </div>
                 ))}
-                <div className="flex-shrink-0 bg-blue-50/80 border border-blue-100 rounded-xl px-3 py-1 min-w-[100px] flex flex-col items-center shadow-sm">
-                    <span className="text-[8px] font-bold text-blue-600 uppercase mb-0.5">TOTAL DIA</span>
-                    <span className="text-lg font-black text-blue-800">{daily}</span>
+                <div className="flex-shrink-0 bg-purple-50/80 border border-purple-100 rounded-xl px-3 py-1 min-w-[100px] flex flex-col items-center shadow-sm">
+                    <span className="text-[8px] font-bold text-purple-600 uppercase mb-0.5">TOTAL DIA</span>
+                    <span className="text-lg font-black text-purple-800">{daily}</span>
                 </div>
-                <div className="flex-shrink-0 bg-cyan-50/80 border border-cyan-100 rounded-xl px-3 py-1 min-w-[100px] flex flex-col items-center shadow-sm">
-                    <span className="text-[8px] font-bold text-cyan-700 uppercase mb-0.5">SOMA TOTAL</span>
-                    <span className="text-lg font-black text-cyan-800">{monthly}</span>
+                <div className="flex-shrink-0 bg-pink-50/80 border border-pink-100 rounded-xl px-3 py-1 min-w-[100px] flex flex-col items-center shadow-sm">
+                    <span className="text-[8px] font-bold text-pink-700 uppercase mb-0.5">SOMA TOTAL</span>
+                    <span className="text-lg font-black text-pink-800">{monthly}</span>
                 </div>
             </div>
         </footer>
