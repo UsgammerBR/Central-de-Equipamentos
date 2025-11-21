@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect, useReducer, useRef, useMemo } from 'react';
+import React, { Component, useState, useEffect, useReducer, useRef, useMemo } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
     CustomMenuIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
@@ -14,7 +13,6 @@ const getFormattedDate = (date: Date): string => {
   return date.toISOString().split('T')[0];
 };
 
-// Robust ID generator compatible with all browsers
 const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substring(2);
 };
@@ -25,7 +23,6 @@ const createEmptyDailyData = (): DailyData => {
     return acc;
   }, {} as DailyData);
 
-  // Initialize each category with one empty row
   CATEGORIES.forEach(category => {
     data[category].push({ id: generateId(), qt: '', contract: '', serial: '', photos: [] });
   });
@@ -33,7 +30,7 @@ const createEmptyDailyData = (): DailyData => {
   return data;
 };
 
-// --- REDUCER & STATE MANAGEMENT ---
+// --- REDUCER ---
 
 type Action =
   | { type: 'SET_DATA'; payload: AppData }
@@ -49,14 +46,14 @@ const dataReducer = (state: AppData, action: Action): AppData => {
             return action.payload;
         case 'ENSURE_DAY_DATA': {
             const { date, dayData } = action.payload;
-            if (state[date]) return state; // Don't overwrite existing
+            if (state[date]) return state;
             const newState = { ...state };
             newState[date] = dayData;
             return newState;
         }
         case 'ADD_ITEM': {
             const { date, category } = action.payload;
-            const newState = JSON.parse(JSON.stringify(state)); // Deep copy
+            const newState = JSON.parse(JSON.stringify(state));
             if (!newState[date]) newState[date] = createEmptyDailyData();
             const newItem: EquipmentItem = {
                 id: generateId(),
@@ -70,13 +67,9 @@ const dataReducer = (state: AppData, action: Action): AppData => {
             const newState = JSON.parse(JSON.stringify(state));
             const dayData = newState[date]?.[category];
             if (!dayData) return state;
-
             const itemIndex = dayData.findIndex((i: EquipmentItem) => i.id === item.id);
-            if (itemIndex > -1) {
-                dayData[itemIndex] = item;
-            } else {
-                dayData.push(item);
-            }
+            if (itemIndex > -1) dayData[itemIndex] = item;
+            else dayData.push(item);
             return newState;
         }
         case 'DELETE_ITEMS': {
@@ -85,12 +78,9 @@ const dataReducer = (state: AppData, action: Action): AppData => {
             const dayData = newState[date]?.[category];
             if (!dayData) return state;
             newState[date][category] = dayData.filter((item: EquipmentItem) => !itemIds.includes(item.id));
-
-            // Ensure there's always one row
             if (newState[date][category].length === 0) {
                  newState[date][category].push({ id: generateId(), qt: '', contract: '', serial: '', photos: [] });
             }
-
             return newState;
         }
         case 'CLEAR_ALL_DATA':
@@ -106,33 +96,21 @@ const isItemActive = (item: EquipmentItem): boolean => {
 
 // --- ERROR BOUNDARY ---
 
-interface ErrorBoundaryProps {
-  children?: React.ReactNode;
-}
-
-interface ErrorBoundaryState {
-  hasError: boolean;
-  error: Error | null;
-}
+interface ErrorBoundaryProps { children?: React.ReactNode; }
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
   }
-
-  static getDerivedStateFromError(error: Error) {
-    return { hasError: true, error };
-  }
-
+  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   render() {
     if (this.state.hasError) {
       return (
         <div className="p-8 text-center">
-          <h1 className="text-2xl font-bold text-red-600 mb-4">Algo deu errado.</h1>
-          <p className="text-gray-600 mb-4">Por favor, recarregue a página.</p>
-          <pre className="text-xs bg-gray-100 p-2 rounded text-left overflow-auto">{this.state.error?.toString()}</pre>
-          <button onClick={() => window.location.reload()} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">Recarregar</button>
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Erro inesperado</h1>
+          <button onClick={() => window.location.reload()} className="px-4 py-2 bg-blue-500 text-white rounded">Recarregar</button>
         </div>
       )
     }
@@ -140,7 +118,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
-// --- MAIN APP COMPONENT ---
+// --- MAIN APP ---
 
 const AppContent = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -154,71 +132,37 @@ const AppContent = () => {
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [cameraModalItem, setCameraModalItem] = useState<EquipmentItem | null>(null);
-
   const [isGlobalDeleteMode, setIsGlobalDeleteMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
   
   const formattedDate = getFormattedDate(currentDate);
 
-  // History Manager
   const dispatchWithHistory = (action: Action) => {
     setHistory(prev => [appData, ...prev].slice(0, 10)); 
     dispatch(action);
   };
 
-  // Load Data
   useEffect(() => {
-    try {
-      const savedData = localStorage.getItem('equipmentData');
-      if (savedData) {
-        const parsedData = JSON.parse(savedData);
-        dispatch({ type: 'SET_DATA', payload: parsedData });
-      }
-    } catch (error) {
-      console.error("Failed to load data from localStorage", error);
-    }
+    const savedData = localStorage.getItem('equipmentData');
+    if (savedData) dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
   }, []);
 
-  // Ensure Data for Today exists
   useEffect(() => {
     if (!appData[formattedDate]) {
       dispatch({ type: 'ENSURE_DAY_DATA', payload: { date: formattedDate, dayData: createEmptyDailyData() } });
     }
   }, [appData, formattedDate]);
 
-  // Save Data
   useEffect(() => {
-    if (isRestoring) {
-        setIsRestoring(false);
-        return;
-    }
-    try {
-        localStorage.setItem('equipmentData', JSON.stringify(appData));
-    } catch (error) {
-        console.error("Failed to save data to localStorage", error);
-    }
+    if (!isRestoring) localStorage.setItem('equipmentData', JSON.stringify(appData));
   }, [appData, isRestoring]);
-
-  // Clock
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = new Date();
-      if (now.getDate() !== currentDate.getDate()) {
-        setCurrentDate(now);
-      }
-    }, 60000);
-    return () => clearInterval(interval);
-  }, [currentDate]);
 
   const currentDayData: DailyData = appData[formattedDate] || createEmptyDailyData();
 
-  // Actions
   const handleAddItem = () => {
     if (!activeCategory) return;
-    const categoryItems = currentDayData[activeCategory] || [];
-    const lastItem = categoryItems[categoryItems.length - 1];
-    
-    // Only add if the last item has data
+    const items = currentDayData[activeCategory] || [];
+    const lastItem = items[items.length - 1];
     if (!lastItem || isItemActive(lastItem)) {
       dispatchWithHistory({ type: 'ADD_ITEM', payload: { date: formattedDate, category: activeCategory } });
     }
@@ -232,49 +176,22 @@ const AppContent = () => {
       setHistory(history.slice(1));
       setIsRestoring(true);
       dispatch({ type: 'SET_DATA', payload: previousState });
-    } else {
-        setConfirmation({ message: "Nenhuma ação para desfazer.", onConfirm: () => {} });
     }
   }
-  
-  const handleOpenModal = (modalName: string) => {
-    setActiveModal(modalName);
-    setIsMenuOpen(false);
-  };
-  
+
   const handleToggleDeleteMode = () => {
     setIsGlobalDeleteMode(prev => !prev);
     setSelectedItems({}); 
   };
-  
-  const handleToggleItemSelection = (category: EquipmentCategory, itemId: string) => {
-    setSelectedItems(prev => {
-        const newCategorySelection = prev[category] ? [...prev[category]] : [];
-        if (newCategorySelection.includes(itemId)) {
-            return { ...prev, [category]: newCategorySelection.filter(id => id !== itemId) };
-        } else {
-            return { ...prev, [category]: [...newCategorySelection, itemId] };
-        }
-    });
-  };
-  
-  const hasSelectedItems = useMemo(() => {
-    return Object.values(selectedItems).some((items) => Array.isArray(items) && items.length > 0);
-  }, [selectedItems]);
 
   const handleConfirmGlobalDelete = () => {
-      const totalSelected = Object.entries(selectedItems).reduce((sum: number, [, itemIds]) => {
-           return sum + (Array.isArray(itemIds) ? itemIds.length : 0);
-      }, 0);
-
+      const totalSelected = Object.values(selectedItems).reduce((sum, ids) => sum + ids.length, 0);
       if (totalSelected > 0) {
         setConfirmation({
-            message: `Tem certeza que deseja apagar ${totalSelected} item(s)?`,
+            message: `Apagar ${totalSelected} item(s)?`,
             onConfirm: () => {
-                Object.entries(selectedItems).forEach(([category, itemIds]) => {
-                    if (Array.isArray(itemIds) && itemIds.length > 0) {
-                        dispatchWithHistory({ type: 'DELETE_ITEMS', payload: { date: formattedDate, category: category as EquipmentCategory, itemIds: itemIds as string[] } });
-                    }
+                Object.entries(selectedItems).forEach(([cat, ids]) => {
+                    if (ids.length > 0) dispatchWithHistory({ type: 'DELETE_ITEMS', payload: { date: formattedDate, category: cat as EquipmentCategory, itemIds: ids } });
                 });
                 handleToggleDeleteMode(); 
             }
@@ -282,81 +199,32 @@ const AppContent = () => {
       }
   };
 
-  const handleSearchToggle = () => {
-    if (isSearchActive) {
-      setCurrentDate(new Date());
-      setIsSearchActive(false);
-    } else {
-      setIsSearchActive(true);
-    }
-  };
-
-  const handleSearchResultSelect = (result: { date: string; category: EquipmentCategory; item: EquipmentItem }) => {
-    const [year, month, day] = result.date.split('-').map(Number);
-    setCurrentDate(new Date(year, month - 1, day));
-    setIsSearchActive(false);
-  };
-
-  // Camera & Gallery
-  const openCamera = (item: EquipmentItem) => {
-      setCameraModalItem(item);
-  }
-
-  const handleCameraCapture = (photo: string, scannedCode?: string) => {
-      if (!cameraModalItem) return;
-      // Find category of item
-      const category = Object.entries(currentDayData).find(([, items]) => items.some(it => it.id === cameraModalItem.id))?.[0] as EquipmentCategory | undefined;
-      
-      if (category) {
-          const updatedItem = { ...cameraModalItem };
-          if (photo) {
-              updatedItem.photos = [...updatedItem.photos, photo];
-          }
-          if (scannedCode) {
-              updatedItem.serial = scannedCode;
-          }
-          handleUpdateItem(category, updatedItem);
-      }
-      setCameraModalItem(null);
-  }
-
-
   return (
-    // Updated Background: Glossy Silver/White Gradient
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200 text-gray-800 font-sans pb-32">
-      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={handleOpenModal}/>
+    // ICE GLASS THEME: Transparent White to Ice Blue
+    <div className="min-h-screen bg-gradient-to-b from-white/95 via-slate-50 to-cyan-50 text-slate-700 font-sans pb-32">
+      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }}/>
       
-      {/* Header: Crystal White Glass */}
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-2xl shadow-sm border-b border-white/60 pt-3 pb-2 px-4">
+      <header className="sticky top-0 z-30 bg-white/10 backdrop-blur-xl pt-4 pb-2 px-4 border-b border-white/20">
         <div className="container mx-auto">
             <div className="flex justify-between items-center mb-2">
-                {/* Menu Icon */}
-                <button
-                    onClick={() => setIsMenuOpen(true)}
-                    className="active:scale-95 transition-transform drop-shadow-md"
-                    aria-label="Open menu"
-                >
+                <button onClick={() => setIsMenuOpen(true)} className="active:scale-95 transition-transform drop-shadow-xl">
                     <CustomMenuIcon className="w-14 h-14" />
                 </button>
 
-                {/* Action Buttons: Recessed Glossy Box */}
-                <div className="flex items-center gap-0.5 bg-slate-50/80 shadow-[inset_0_2px_4px_rgba(0,0,0,0.08)] p-1.5 rounded-2xl border border-white/60 backdrop-blur-sm">
-                    <ActionButton onClick={handleAddItem}><IconPlus className="w-5 h-5" /></ActionButton>
-                    <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-5 h-5" /></ActionButton>
-                    {isGlobalDeleteMode && hasSelectedItems && (
-                    <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true}>
-                        <IconTrash className="w-5 h-5" />
-                    </ActionButton>
+                <div className="flex items-center gap-3">
+                    <ActionButton onClick={handleAddItem}><IconPlus className="w-3.5 h-3.5" /></ActionButton>
+                    <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-3.5 h-3.5" /></ActionButton>
+                    {isGlobalDeleteMode && Object.values(selectedItems).reduce((acc, items) => acc + items.length, 0) > 0 && (
+                    <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true}><IconTrash className="w-3.5 h-3.5" /></ActionButton>
                     )}
-                    <ActionButton onClick={handleUndo}><IconUndo className="w-5 h-5" /></ActionButton>
-                    <ActionButton onClick={handleSearchToggle}><IconSearch className="w-5 h-5" /></ActionButton>
+                    <ActionButton onClick={handleUndo}><IconUndo className="w-3.5 h-3.5" /></ActionButton>
+                    <ActionButton onClick={() => setIsSearchActive(!isSearchActive)}><IconSearch className="w-3.5 h-3.5" /></ActionButton>
                 </div>
             </div>
 
-            {/* Date: Centered below */}
             <div className="text-center">
-                <div className="inline-block px-6 py-1 rounded-full bg-white/60 border border-white/80 backdrop-blur-xl shadow-sm">
-                    <div className="text-lg font-extrabold text-gray-500 tracking-tight">
+                <div className="inline-block px-6 py-1 rounded-full bg-white/20 border border-white/40 backdrop-blur-xl shadow-sm">
+                    <div className="text-lg font-extrabold text-slate-400 tracking-tight drop-shadow-sm">
                         {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </div>
                 </div>
@@ -374,148 +242,117 @@ const AppContent = () => {
                 onViewGallery={(item) => setGalleryItem(item)}
                 isDeleteMode={isGlobalDeleteMode}
                 selectedItems={selectedItems[category] || []}
-                onToggleSelect={(itemId) => handleToggleItemSelection(category, itemId)}
+                onToggleSelect={(id) => setSelectedItems(prev => ({ ...prev, [category]: prev[category]?.includes(id) ? prev[category].filter(i => i !== id) : [...(prev[category]||[]), id] }))}
                 isActive={category === activeCategory}
                 onActivate={() => setActiveCategory(category)}
-                onOpenCamera={openCamera}
+                onOpenCamera={(item) => setCameraModalItem(item)}
             />
         ))}
       </main>
 
       <SummaryFooter data={currentDayData} allData={appData} currentDate={formattedDate} />
             
-      {/* Modals */}
-      {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} onUpdatePhotos={(updatedPhotos) => {
-        const category = Object.entries(currentDayData).find(([, items]) => items.some(it => it.id === galleryItem.id))?.[0] as EquipmentCategory | undefined;
-        if(category) {
-            const updatedItem = { ...galleryItem, photos: updatedPhotos };
-            handleUpdateItem(category, updatedItem);
-            setGalleryItem(updatedItem);
+      {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} onUpdatePhotos={(photos) => {
+        const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === galleryItem.id)) as EquipmentCategory;
+        if(cat) {
+            const updated = { ...galleryItem, photos };
+            handleUpdateItem(cat, updated);
+            setGalleryItem(updated);
         }
-      }}
-      setConfirmation={setConfirmation}
-      />}
+      }} setConfirmation={setConfirmation} />}
       
-      {cameraModalItem && <CameraModal onClose={() => setCameraModalItem(null)} onCapture={handleCameraCapture} />}
+      {cameraModalItem && <CameraModal onClose={() => setCameraModalItem(null)} onCapture={(photo, code) => {
+           const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
+           if (cat) {
+               const updated = { ...cameraModalItem };
+               if (photo) updated.photos = [...updated.photos, photo];
+               if (code) updated.serial = code;
+               handleUpdateItem(cat, updated);
+           }
+           setCameraModalItem(null);
+      }} />}
 
-      {activeModal === 'calendar' && <CalendarModal currentDate={currentDate} onClose={() => setActiveModal(null)} onDateSelect={date => {setCurrentDate(date); setActiveModal(null);}}/>}
+      {activeModal === 'calendar' && <CalendarModal currentDate={currentDate} onClose={() => setActiveModal(null)} onDateSelect={d => { setCurrentDate(d); setActiveModal(null); }}/>}
       {activeModal === 'save' && <DownloadModal data={currentDayData} date={formattedDate} onClose={() => setActiveModal(null)} />}
       {activeModal === 'export' && <ShareModal data={currentDayData} date={formattedDate} onClose={() => setActiveModal(null)} />}
-      {activeModal === 'settings' && <SettingsModal onClose={() => setActiveModal(null)} onClearData={() => {
-        setConfirmation({
-            message: "Você tem certeza? Todos os dados salvos serão apagados permanentemente.",
-            onConfirm: () => {
-                dispatchWithHistory({ type: 'CLEAR_ALL_DATA' });
-                setActiveModal(null);
-            }
-        });
-      }}/>}
+      {activeModal === 'settings' && <SettingsModal onClose={() => setActiveModal(null)} onClearData={() => setConfirmation({ message: "Apagar tudo permanentemente?", onConfirm: () => { dispatchWithHistory({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); } })}/>}
       {activeModal === 'about' && <AboutModal onClose={() => setActiveModal(null)} onShareClick={() => setActiveModal('shareApp')}/>}
       {activeModal === 'shareApp' && <ShareModal isSharingApp onClose={() => setActiveModal(null)} />}
-      {isSearchActive && <SearchModal onClose={() => setIsSearchActive(false)} appData={appData} onSelect={handleSearchResultSelect} />}
+      {isSearchActive && <SearchModal onClose={() => setIsSearchActive(false)} appData={appData} onSelect={(res) => { 
+          const [y, m, d] = res.date.split('-'); 
+          setCurrentDate(new Date(y, m-1, d)); 
+          setIsSearchActive(false); 
+      }} />}
       {confirmation && <ConfirmationModal message={confirmation.message} onConfirm={() => { confirmation.onConfirm(); setConfirmation(null); }} onCancel={() => setConfirmation(null)} />}
     </div>
   );
 };
 
-const App = () => (
-    <ErrorBoundary>
-        <AppContent />
-    </ErrorBoundary>
-)
+const App = () => (<ErrorBoundary><AppContent /></ErrorBoundary>)
+export default App;
 
-/* --- SUB-COMPONENTS & MODALS --- */
+// --- COMPONENTS ---
 
-const ActionButton = ({ children, onClick, isPrimary = false, isDanger = false }: { children?: React.ReactNode; onClick?: () => void; isPrimary?: boolean; isDanger?: boolean; }) => (
+const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
     <button 
         onClick={onClick} 
-        className={`w-10 h-10 flex items-center justify-center rounded-lg transition-all duration-100 ease-in-out shadow-sm border active:shadow-inner active:scale-95 active:translate-y-px ${
-            isPrimary ? 'bg-gradient-to-b from-cyan-400 to-cyan-500 border-cyan-600 text-white hover:from-cyan-300 hover:to-cyan-400' : 
-            isDanger ? 'bg-gradient-to-b from-red-50 to-red-100 border-red-200 text-red-500 hover:from-red-100 hover:to-red-200' :
-            'bg-gradient-to-b from-white to-gray-50 border-gray-200 text-gray-600 hover:from-gray-50 hover:to-gray-100'
+        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:shadow-inner active:translate-y-0.5 shadow-md border ${
+            isPrimary ? 'bg-cyan-500 border-cyan-600 text-white' : 
+            isDanger ? 'bg-red-50 border-red-100 text-red-500' :
+            'bg-white border-white/80 text-cyan-400'
         }`}
     >
         {children}
     </button>
 );
 
-const EquipmentSection: React.FC<{ 
-    category: EquipmentCategory; 
-    items: EquipmentItem[]; 
-    onUpdateItem: (item: EquipmentItem) => void; 
-    onViewGallery: (item: EquipmentItem) => void;
-    isDeleteMode: boolean;
-    selectedItems: string[];
-    onToggleSelect: (itemId: string) => void;
-    isActive: boolean;
-    onActivate: () => void;
-    onOpenCamera: (item: EquipmentItem) => void;
-}> = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }) => {
-    return (
-        <div onClick={onActivate}>
-            <h2 className="text-lg font-bold text-cyan-700 uppercase tracking-widest drop-shadow-sm mb-2 ml-2">{category}</h2>
-            {/* Glass Prism Card */}
-            <section className={`p-2 bg-white/60 backdrop-blur-md border border-white/80 rounded-xl shadow-lg shadow-slate-200/50 transition-all duration-300 ${isActive ? 'ring-1 ring-white shadow-xl scale-[1.01]' : ''}`}>
-                <div className="space-y-2">
-                    {items.map(item => (
-                        <EquipmentRow 
-                            key={item.id} 
-                            item={item} 
-                            onUpdate={onUpdateItem} 
-                            isDeleteMode={isDeleteMode}
-                            isSelected={selectedItems.includes(item.id)} 
-                            onToggleSelect={() => onToggleSelect(item.id)} 
-                            onViewGallery={() => onViewGallery(item)} 
-                            onOpenCamera={() => onOpenCamera(item)}
-                        />
-                    ))}
-                </div>
-            </section>
-        </div>
-    );
-}
+const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }: any) => (
+    <div onClick={onActivate}>
+        {/* White Text with Shadow */}
+        <h2 className="text-lg font-bold text-white drop-shadow-md uppercase tracking-widest mb-2 ml-2">{category}</h2>
+        <section className={`p-2 bg-white/30 backdrop-blur-lg border-t border-l border-white/60 border-b border-r border-white/20 rounded-xl shadow-lg transition-all duration-300 ${isActive ? 'ring-1 ring-white/60 scale-[1.01]' : ''}`}>
+            <div className="space-y-2">
+                {items.map((item: any) => (
+                    <EquipmentRow 
+                        key={item.id} item={item} onUpdate={onUpdateItem} isDeleteMode={isDeleteMode}
+                        isSelected={selectedItems.includes(item.id)} onToggleSelect={() => onToggleSelect(item.id)} 
+                        onViewGallery={() => onViewGallery(item)} onOpenCamera={() => onOpenCamera(item)}
+                    />
+                ))}
+            </div>
+        </section>
+    </div>
+);
 
-const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentItem) => void; isDeleteMode: boolean; isSelected: boolean; onToggleSelect: () => void; onViewGallery: () => void; onOpenCamera: () => void; }> = ({ item, onUpdate, isDeleteMode, isSelected, onToggleSelect, onViewGallery, onOpenCamera }) => {
-    const handleChange = (field: keyof Omit<EquipmentItem, 'id'|'photos'>, value: string) => onUpdate({ ...item, [field]: value });
-    const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
+const EquipmentRow = ({ item, onUpdate, isDeleteMode, isSelected, onToggleSelect, onViewGallery, onOpenCamera }: any) => {
+    const handleChange = (field: string, value: string) => onUpdate({ ...item, [field]: value });
+    const copy = (text: string) => navigator.clipboard.writeText(text);
     
     return (
-        <div className={`flex items-center gap-1 p-1 rounded-lg transition-all ${isSelected ? 'bg-red-500/10 border border-red-200' : 'bg-white/30'}`}>
-            {isDeleteMode && <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="form-checkbox h-5 w-5 rounded bg-gray-100 border-gray-300 text-cyan-600 mr-1 flex-shrink-0"/>}
-            
-            {/* Input Container: Optimized for Mobile Widths */}
+        <div className={`flex items-center gap-0.5 p-1 rounded-lg transition-all ${isSelected ? 'bg-red-500/10 border border-red-200' : 'bg-white/20'}`}>
+            {isDeleteMode && <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="form-checkbox h-4 w-4 rounded text-cyan-600 mr-1"/>}
             <div className="flex flex-1 items-center gap-0.5 min-w-0">
-                {/* QT: Tiny fixed width */}
-                <div className="w-9 flex-shrink-0">
-                     <InputWithLabel 
-                        placeholder="QT" 
-                        type="number"
-                        value={item.qt} 
-                        onChange={e => {
-                            const val = e.target.value;
-                            if (val === '' || (/^\d{1,2}$/.test(val) && parseInt(val, 10) < 100)) handleChange('qt', val);
-                        }} 
+                {/* QT: Very small width */}
+                <div className="w-8 flex-shrink-0">
+                     <InputWithLabel placeholder="QT" type="number" value={item.qt} 
+                        onChange={(e: any) => { if (e.target.value === '' || /^\d{1,2}$/.test(e.target.value)) handleChange('qt', e.target.value); }} 
                     />
                 </div>
-
-                {/* Contract (40%) & Serial (60%) */}
+                {/* Serial (60%) & Contract (40%) */}
                 <div className="flex-1 flex gap-0.5 min-w-0">
-                     <div className="flex-[2] min-w-0">
-                        <InputWithLabel placeholder="Contrato" value={item.contract} onChange={e => handleChange('contract', e.target.value)} maxLength={10} onCopy={() => copyToClipboard(item.contract)} />
+                     <div className="flex-[2] min-w-0 relative">
+                        <InputWithLabel placeholder="Contrato" value={item.contract} onChange={(e: any) => handleChange('contract', e.target.value)} maxLength={10} onCopy={() => copy(item.contract)} />
                      </div>
-                     <div className="flex-[3] min-w-0">
-                        <InputWithLabel placeholder="Serial" value={item.serial} onChange={e => handleChange('serial', e.target.value)} maxLength={20} onCopy={() => copyToClipboard(item.serial)} />
+                     <div className="flex-[3] min-w-0 relative">
+                        <InputWithLabel placeholder="Serial" value={item.serial} onChange={(e: any) => handleChange('serial', e.target.value)} maxLength={20} onCopy={() => copy(item.serial)} />
                      </div>
                 </div>
-
-                {/* Buttons: Tightly Packed */}
-                <div className="flex-shrink-0 flex items-center justify-center gap-0.5 ml-0.5">
-                    <button onClick={onOpenCamera} className="w-7 h-7 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 rounded-md active:scale-95 text-gray-600 shadow-sm border border-gray-200"><IconCamera className="w-4 h-4"/></button>
-                    <button onClick={onViewGallery} className="relative w-7 h-7 flex items-center justify-center bg-gradient-to-b from-white to-gray-50 hover:from-gray-50 hover:to-gray-100 rounded-md active:scale-95 disabled:opacity-50 text-gray-600 shadow-sm border border-gray-200" disabled={item.photos.length === 0}>
-                        <IconGallery className="w-4 h-4"/>
-                        {item.photos.length > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-[8px] w-3 h-3 flex items-center justify-center rounded-full shadow-sm">{item.photos.length}</span>
-                        )}
+                {/* Buttons */}
+                <div className="flex-shrink-0 flex gap-0.5 ml-0.5">
+                    <button onClick={onOpenCamera} className="w-7 h-7 flex items-center justify-center bg-white rounded-md active:scale-95 text-gray-500 shadow-sm"><IconCamera className="w-3.5 h-3.5"/></button>
+                    <button onClick={onViewGallery} className="relative w-7 h-7 flex items-center justify-center bg-white rounded-md active:scale-95 text-gray-500 shadow-sm" disabled={item.photos.length === 0}>
+                        <IconGallery className="w-3.5 h-3.5"/>
+                        {item.photos.length > 0 && <span className="absolute -top-1 -right-1 bg-cyan-500 text-white text-[8px] w-3 h-3 flex items-center justify-center rounded-full">{item.photos.length}</span>}
                     </button>
                 </div>
             </div>
@@ -523,475 +360,221 @@ const EquipmentRow: React.FC<{ item: EquipmentItem; onUpdate: (item: EquipmentIt
     );
 }
 
-// Updated Input: Carved Glass Style (Inner Shadow)
+// Input: Carved Glass, Tiny Text for Mobile, Clipboard Icon Restored
 const InputWithLabel = ({ placeholder, value, onChange, type = "text", maxLength, onCopy }: any) => (
-    <div className="relative group w-full">
+    <div className="relative group w-full h-full">
         <input
-            type={type}
-            value={value}
-            onChange={onChange}
-            placeholder={placeholder}
-            maxLength={maxLength}
-            className="w-full bg-slate-50/50 shadow-[inset_0_1px_2px_rgba(0,0,0,0.06)] border border-gray-200 rounded-md px-0 py-1.5 text-xs sm:text-sm font-medium text-gray-700 focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:bg-white placeholder-gray-400 transition-all text-center"
+            type={type} value={value} onChange={onChange} placeholder={placeholder} maxLength={maxLength}
+            className="w-full h-8 bg-white/40 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)] border border-white/60 rounded-md px-0 py-1 text-[10px] font-medium text-slate-700 focus:outline-none focus:ring-1 focus:ring-cyan-400 focus:bg-white placeholder-gray-400 transition-all text-center compact-input"
         />
         {onCopy && value && (
-            <button 
-                onClick={onCopy} 
-                className="absolute right-1 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"
-            >
-                <IconClipboard className="w-3 h-3 text-gray-400 hover:text-cyan-600" />
+            <button onClick={onCopy} className="absolute right-0 top-0 h-full px-1 flex items-center justify-center opacity-50 hover:opacity-100 z-10">
+                <IconClipboard className="w-2.5 h-2.5 text-slate-500" />
             </button>
         )}
     </div>
 );
 
-const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData; allData: AppData; currentDate: string }) => {
-    const calculateTotal = (items: EquipmentItem[]) => items.reduce((acc, item) => {
-         if (!isItemActive(item)) return acc;
-         const qty = parseInt(item.qt, 10);
-         return acc + (isNaN(qty) ? 1 : qty);
-    }, 0);
-
-    const dailyTotal = useMemo(() => {
-        return Object.values(data).reduce((acc, items) => acc + calculateTotal(items), 0);
-    }, [data]);
-
-    const monthlyTotal = useMemo(() => {
-        const [currentYear, currentMonth] = currentDate.split('-');
-        let total = 0;
-        Object.entries(allData).forEach(([dateKey, dayData]) => {
-            const [y, m] = dateKey.split('-');
-            if (y === currentYear && m === currentMonth) {
-                 Object.values(dayData).forEach(items => {
-                     total += calculateTotal(items);
-                 });
-            }
-        });
-        return total;
+const SummaryFooter = ({ data, allData, currentDate }: any) => {
+    const calc = (items: any[]) => items.reduce((acc, i) => isItemActive(i) ? acc + (parseInt(i.qt)||1) : acc, 0);
+    const daily = Object.values(data).reduce((acc: number, items: any) => acc + calc(items as any[]), 0);
+    const monthly = useMemo(() => {
+        const [cy, cm] = currentDate.split('-');
+        let t = 0;
+        Object.entries(allData).forEach(([d, dd]: any) => { if(d.startsWith(`${cy}-${cm}`)) Object.values(dd).forEach((i: any) => t += calc(i)); });
+        return t;
     }, [allData, currentDate]);
 
     return (
-        <footer className="fixed bottom-0 left-0 w-full bg-slate-100/90 backdrop-blur-xl border-t border-white/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] p-3 z-40 pb-safe">
-            <div className="container mx-auto">
-                <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar snap-x">
-                    {CATEGORIES.map(category => (
-                        <div key={category} className="flex-shrink-0 snap-start bg-white/60 border border-white/80 rounded-xl px-4 py-2 min-w-[100px] flex flex-col items-center justify-center shadow-sm">
-                            <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider mb-1">{category}</span>
-                            <span className="text-xl font-black text-slate-700">{calculateTotal(data[category] || [])}</span>
-                        </div>
-                    ))}
-                    
-                    {/* Total Dia Box */}
-                    <div className="flex-shrink-0 snap-start bg-blue-50/80 border border-blue-100/80 rounded-xl px-4 py-2 min-w-[110px] flex flex-col items-center justify-center shadow-sm ring-1 ring-blue-200/50">
-                        <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider mb-1">TOTAL DIA</span>
-                        <span className="text-xl font-black text-blue-800">{dailyTotal}</span>
+        <footer className="fixed bottom-0 left-0 w-full bg-white/60 backdrop-blur-xl border-t border-white/50 p-3 z-40 pb-safe">
+            <div className="flex overflow-x-auto gap-3 pb-2 hide-scrollbar snap-x">
+                {CATEGORIES.map(cat => (
+                    <div key={cat} className="flex-shrink-0 bg-white/40 border border-white/60 rounded-xl px-3 py-1 min-w-[90px] flex flex-col items-center shadow-sm">
+                        <span className="text-[8px] font-bold text-cyan-600 uppercase mb-0.5">{cat}</span>
+                        <span className="text-lg font-black text-cyan-800">{calc(data[cat]||[])}</span>
                     </div>
-
-                     {/* Soma Total Box */}
-                    <div className="flex-shrink-0 snap-start bg-cyan-50/80 border border-cyan-100/80 rounded-xl px-4 py-2 min-w-[110px] flex flex-col items-center justify-center shadow-sm ring-1 ring-cyan-200/50">
-                        <span className="text-[10px] font-bold text-cyan-700 uppercase tracking-wider mb-1">SOMA TOTAL</span>
-                        <span className="text-xl font-black text-cyan-800">{monthlyTotal}</span>
-                    </div>
+                ))}
+                <div className="flex-shrink-0 bg-blue-50/80 border border-blue-100 rounded-xl px-3 py-1 min-w-[100px] flex flex-col items-center shadow-sm">
+                    <span className="text-[8px] font-bold text-blue-600 uppercase mb-0.5">TOTAL DIA</span>
+                    <span className="text-lg font-black text-blue-800">{daily}</span>
+                </div>
+                <div className="flex-shrink-0 bg-cyan-50/80 border border-cyan-100 rounded-xl px-3 py-1 min-w-[100px] flex flex-col items-center shadow-sm">
+                    <span className="text-[8px] font-bold text-cyan-700 uppercase mb-0.5">SOMA TOTAL</span>
+                    <span className="text-lg font-black text-cyan-800">{monthly}</span>
                 </div>
             </div>
         </footer>
     );
 };
 
-// --- MODALS (Updated to Milky Glass Theme) ---
+// --- MODALS (Milky/Ice Glass Theme) ---
 
-const Modal = ({ children, onClose }: { children?: React.ReactNode; onClose: () => void }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
-    <div className="bg-white/90 backdrop-blur-xl rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/50 animate-slide-in-up" onClick={e => e.stopPropagation()}>
+const Modal = ({ children, onClose }: any) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+    <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/50 animate-slide-in-up" onClick={e => e.stopPropagation()}>
       <div className="p-4 max-h-[80vh] overflow-y-auto relative">
-        <button onClick={onClose} className="absolute top-3 right-3 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-1"><IconX className="w-5 h-5"/></button>
+        <button onClick={onClose} className="absolute top-3 right-3 bg-white/50 rounded-full p-1"><IconX className="w-5 h-5 text-slate-500"/></button>
         {children}
       </div>
     </div>
-    <div className="absolute inset-0 -z-10" onClick={onClose} />
   </div>
 );
 
-const CalendarModal = ({ currentDate, onClose, onDateSelect }: { currentDate: Date; onClose: () => void; onDateSelect: (d: Date) => void }) => {
-    const [viewDate, setViewDate] = useState(currentDate);
-    const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-    const startDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-    
-    const changeMonth = (delta: number) => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + delta, 1));
-
+const DownloadModal = ({ data, date, onClose }: any) => {
+    const download = (type: 'word'|'excel') => {
+        let content = '', mime = '', ext = '';
+        if(type === 'word') {
+            content = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'></head><body><h1>Relatório ${date}</h1>${CATEGORIES.map(cat => `<h3>${cat}</h3><ul>${(data[cat]||[]).filter(isItemActive).map((i:any)=>`<li>QT:${i.qt||1} C:${i.contract} S:${i.serial}</li>`).join('')}</ul>`).join('')}</body></html>`;
+            mime = 'application/msword'; ext = '.doc';
+        } else {
+            content = `<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body><table><thead><tr><th>Cat</th><th>QT</th><th>Contrato</th><th>Serial</th></tr></thead><tbody>${CATEGORIES.flatMap(cat => (data[cat]||[]).filter(isItemActive).map((i:any)=>`<tr><td>${cat}</td><td>${i.qt||1}</td><td>${i.contract}</td><td>${i.serial}</td></tr>`)).join('')}</tbody></table></body></html>`;
+            mime = 'application/vnd.ms-excel'; ext = '.xls';
+        }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob(['\ufeff', content], { type: mime }));
+        a.download = `equipamentos_${date}${ext}`;
+        a.click();
+    };
     return (
         <Modal onClose={onClose}>
-            <div className="text-center mb-4">
-                <h3 className="text-xl font-bold text-gray-700 mb-4">Selecionar Data</h3>
-                <div className="flex justify-between items-center mb-4 px-4">
-                    <button onClick={() => changeMonth(-1)} className="p-2 rounded-full hover:bg-gray-100"><IconChevronLeft className="w-5 h-5 text-gray-600"/></button>
-                    <span className="font-bold text-gray-700 text-lg capitalize">{viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
-                    <button onClick={() => changeMonth(1)} className="p-2 rounded-full hover:bg-gray-100"><IconChevronRight className="w-5 h-5 text-gray-600"/></button>
+            <h3 className="text-xl font-bold text-center mb-6 text-slate-700">Salvar Manualmente</h3>
+            <div className="grid grid-cols-2 gap-4">
+                <button onClick={() => download('word')} className="flex flex-col items-center p-4 bg-blue-50 rounded-xl"><IconFileWord className="w-10 h-10 text-blue-600 mb-2"/><span className="text-blue-800 font-bold">Word</span></button>
+                <button onClick={() => download('excel')} className="flex flex-col items-center p-4 bg-green-50 rounded-xl"><IconFileExcel className="w-10 h-10 text-green-600 mb-2"/><span className="text-green-800 font-bold">Excel</span></button>
+            </div>
+        </Modal>
+    );
+};
+
+const ShareModal = ({ data, date, onClose, isSharingApp }: any) => {
+    const txt = isSharingApp ? "App Controle de Equipamentos!" : `Equipamentos dia ${date}`;
+    const open = (url: string) => window.open(url, '_blank');
+    return (
+        <Modal onClose={onClose}>
+            <h3 className="text-xl font-bold text-center mb-6 text-slate-700">{isSharingApp ? 'Compartilhar App' : 'Exportar'}</h3>
+            <div className="flex justify-around">
+                <button onClick={() => open(`https://wa.me/?text=${encodeURIComponent(txt)}`)} className="flex flex-col items-center"><IconWhatsapp className="w-10 h-10 text-green-500"/><span className="text-xs">WhatsApp</span></button>
+                <button onClick={() => open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(txt)}`)} className="flex flex-col items-center"><IconTelegram className="w-10 h-10 text-blue-500"/><span className="text-xs">Telegram</span></button>
+                <button onClick={() => open(`mailto:?subject=App&body=${encodeURIComponent(txt)}`)} className="flex flex-col items-center"><IconEmail className="w-10 h-10 text-gray-500"/><span className="text-xs">E-mail</span></button>
+            </div>
+        </Modal>
+    );
+};
+
+const CameraModal = ({ onClose, onCapture }: any) => {
+    useEffect(() => {
+        const scanner = new (window as any).Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+        scanner.render((txt: string) => { scanner.clear(); onCapture('', txt); }, console.error);
+        return () => { try { scanner.clear(); } catch(e){} };
+    }, []);
+    return (
+        <div className="fixed inset-0 z-50 bg-black flex flex-col items-center justify-center">
+            <div id="reader" className="w-full max-w-sm bg-white rounded-lg overflow-hidden"></div>
+            <button onClick={onClose} className="mt-4 p-2 bg-white/20 rounded-full text-white"><IconX className="w-8 h-8"/></button>
+        </div>
+    );
+};
+
+const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmation }: any) => {
+    const ref = useRef<HTMLInputElement>(null);
+    const [view, setView] = useState<number|null>(null);
+    const add = (e: any) => {
+        const f = e.target.files?.[0];
+        if(f) { const r = new FileReader(); r.onload = (ev) => onUpdatePhotos([...item.photos, ev.target?.result]); r.readAsDataURL(f); }
+    };
+    return (
+        <Modal onClose={onClose}>
+            <h3 className="text-xl font-bold text-center mb-4 text-slate-700">Galeria</h3>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+                {item.photos.map((p: string, i: number) => (
+                    <img key={i} src={p} onClick={() => setView(i)} className="aspect-square rounded-lg object-cover shadow-sm cursor-pointer"/>
+                ))}
+                <button onClick={() => ref.current?.click()} className="aspect-square rounded-lg border-2 border-dashed border-cyan-300 flex items-center justify-center text-cyan-400"><IconPlus className="w-6 h-6"/></button>
+            </div>
+            <input type="file" accept="image/*" ref={ref} className="hidden" onChange={add} />
+            {view !== null && (
+                <div className="fixed inset-0 z-[60] bg-black/95 flex flex-col items-center justify-center p-4" onClick={() => setView(null)}>
+                    <img src={item.photos[view]} className="max-w-full max-h-[80vh] rounded-lg mb-4" />
+                    <button onClick={(e) => { e.stopPropagation(); setConfirmation({ message: "Excluir foto?", onConfirm: () => { onUpdatePhotos(item.photos.filter((_:any, i:number) => i !== view)); setView(null); }}); }} className="px-6 py-2 bg-red-500 text-white rounded-full font-bold">Excluir</button>
                 </div>
-                <div className="grid grid-cols-7 gap-1 mb-2">
-                    {['D','S','T','Q','Q','S','S'].map(d => <span key={d} className="text-xs font-bold text-gray-400">{d}</span>)}
+            )}
+        </Modal>
+    );
+};
+
+const SettingsModal = ({ onClose, onClearData }: any) => (
+    <Modal onClose={onClose}>
+        <h3 className="text-xl font-bold text-center mb-4 text-slate-700">Configurações</h3>
+        <button onClick={onClearData} className="w-full p-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100 flex items-center justify-center gap-2"><IconTrash className="w-5 h-5"/> Limpar Tudo</button>
+    </Modal>
+);
+
+const AboutModal = ({ onClose, onShareClick }: any) => (
+    <Modal onClose={onClose}>
+        <div className="text-center">
+            <CustomMenuIcon className="w-20 h-20 mx-auto mb-2 drop-shadow-xl" />
+            <h2 className="text-xl font-black text-slate-800">Controle de Equipamentos</h2>
+            <p className="text-xs font-mono text-cyan-600 bg-cyan-50 inline-block px-2 py-1 rounded mb-4">V0.0.1b</p>
+            <div className="bg-slate-50 rounded-lg p-3 mb-4 text-left text-sm text-slate-600 border border-slate-100"><p><b>Dono:</b> Leo Luz</p></div>
+            <button onClick={onShareClick} className="w-full py-2 bg-cyan-500 text-white rounded-lg font-bold shadow-md">Compartilhar App</button>
+        </div>
+    </Modal>
+);
+
+const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => {
+    const [d, setD] = useState(currentDate);
+    const days = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+    const start = new Date(d.getFullYear(), d.getMonth(), 1).getDay();
+    return (
+        <Modal onClose={onClose}>
+            <div className="text-center">
+                <div className="flex justify-between items-center mb-4">
+                    <button onClick={() => setD(new Date(d.getFullYear(), d.getMonth()-1, 1))}><IconChevronLeft className="w-5 h-5 text-slate-500"/></button>
+                    <span className="font-bold text-slate-700 capitalize">{d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</span>
+                    <button onClick={() => setD(new Date(d.getFullYear(), d.getMonth()+1, 1))}><IconChevronRight className="w-5 h-5 text-slate-500"/></button>
                 </div>
                 <div className="grid grid-cols-7 gap-1">
-                    {Array.from({ length: startDay }).map((_, i) => <div key={`empty-${i}`} />)}
-                    {Array.from({ length: daysInMonth }).map((_, i) => {
-                        const d = i + 1;
-                        const isSelected = d === currentDate.getDate() && viewDate.getMonth() === currentDate.getMonth() && viewDate.getFullYear() === currentDate.getFullYear();
-                        return (
-                            <button 
-                                key={d} 
-                                onClick={() => onDateSelect(new Date(viewDate.getFullYear(), viewDate.getMonth(), d))}
-                                className={`h-10 w-10 rounded-full flex items-center justify-center text-sm font-medium transition-all ${isSelected ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-200' : 'hover:bg-gray-100 text-gray-600'}`}
-                            >
-                                {d}
-                            </button>
-                        );
+                    {Array.from({length: start}).map((_,i)=><div key={i}/>)}
+                    {Array.from({length: days}).map((_,i)=>{
+                        const x = new Date(d.getFullYear(), d.getMonth(), i+1);
+                        const isSel = x.toDateString() === currentDate.toDateString();
+                        return <button key={i} onClick={() => onDateSelect(x)} className={`h-8 w-8 rounded-full text-xs font-bold ${isSel ? 'bg-cyan-500 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>{i+1}</button>
                     })}
                 </div>
             </div>
         </Modal>
-    );
+    )
 };
 
-const DownloadModal = ({ data, date, onClose }: { data: DailyData; date: string; onClose: () => void }) => {
-    const generateTextContent = () => {
-        let text = `RELATÓRIO DE EQUIPAMENTOS - ${date}\n\n`;
-        CATEGORIES.forEach(cat => {
-            const items = data[cat] || [];
-            if(items.length === 0) return;
-            text += `--- ${cat} ---\n`;
-            items.forEach(item => {
-                if(isItemActive(item)) {
-                     text += `QT: ${item.qt || '1'} | Contrato: ${item.contract} | Serial: ${item.serial}\n`;
-                }
-            });
-            text += '\n';
-        });
-        return text;
-    };
-
-    const downloadFile = (type: 'word' | 'excel') => {
-        let blob: Blob;
-        let filename = `equipamentos_${date}`;
-        
-        if (type === 'word') {
-            // HTML content for Word to preserve formatting better than plain text
-            const content = `
-                <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-                <head><meta charset='utf-8'><title>Relatório</title></head>
-                <body>
-                <h1>Relatório de Equipamentos - ${date}</h1>
-                ${CATEGORIES.map(cat => {
-                    const items = data[cat] || [];
-                    if (!items.some(isItemActive)) return '';
-                    return `
-                        <h3>${cat}</h3>
-                        <ul>
-                        ${items.filter(isItemActive).map(item => `<li><b>QT:</b> ${item.qt || '1'} | <b>Contrato:</b> ${item.contract} | <b>Serial:</b> ${item.serial}</li>`).join('')}
-                        </ul>
-                    `;
-                }).join('')}
-                </body></html>
-            `;
-            blob = new Blob(['\ufeff', content], { type: 'application/msword' });
-            filename += '.doc';
-        } else {
-            // HTML Table for Excel
-             const content = `
-                <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-                <head><meta charset="UTF-8"></head>
-                <body>
-                <table>
-                    <thead>
-                        <tr><th>Categoria</th><th>QT</th><th>Contrato</th><th>Serial</th></tr>
-                    </thead>
-                    <tbody>
-                        ${CATEGORIES.flatMap(cat => (data[cat] || []).filter(isItemActive).map(item => `
-                            <tr>
-                                <td>${cat}</td>
-                                <td>${item.qt || '1'}</td>
-                                <td>${item.contract}</td>
-                                <td>${item.serial}</td>
-                            </tr>
-                        `)).join('')}
-                    </tbody>
-                </table>
-                </body></html>
-            `;
-            blob = new Blob(['\ufeff', content], { type: 'application/vnd.ms-excel' });
-            filename += '.xls';
-        }
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
-
+const SearchModal = ({ onClose, appData, onSelect }: any) => {
+    const [q, setQ] = useState('');
+    const res = useMemo(() => {
+        if(q.length<2) return [];
+        const r: any[] = [];
+        Object.entries(appData).forEach(([d, dd]: any) => Object.entries(dd).forEach(([c, items]: any) => (items as any[]).forEach(i => {
+            if(i.serial.toLowerCase().includes(q.toLowerCase()) || i.contract.toLowerCase().includes(q.toLowerCase())) r.push({ date: d, category: c, item: i });
+        })));
+        return r;
+    }, [q, appData]);
     return (
         <Modal onClose={onClose}>
-            <h3 className="text-xl font-bold text-center mb-6 text-gray-700">Salvar Manualmente</h3>
-            <div className="grid grid-cols-2 gap-4">
-                <button onClick={() => downloadFile('word')} className="flex flex-col items-center justify-center p-4 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition-colors">
-                    <IconFileWord className="w-12 h-12 text-blue-600 mb-2" />
-                    <span className="font-bold text-blue-800">Word</span>
-                </button>
-                <button onClick={() => downloadFile('excel')} className="flex flex-col items-center justify-center p-4 bg-green-50 border border-green-100 rounded-xl hover:bg-green-100 transition-colors">
-                    <IconFileExcel className="w-12 h-12 text-green-600 mb-2" />
-                    <span className="font-bold text-green-800">Excel</span>
-                </button>
+            <h3 className="font-bold text-slate-700 mb-2">Buscar</h3>
+            <input autoFocus value={q} onChange={e=>setQ(e.target.value)} className="w-full p-2 bg-slate-50 border rounded-lg mb-2 outline-none focus:ring-1 ring-cyan-400" placeholder="Serial/Contrato..."/>
+            <div className="max-h-40 overflow-y-auto space-y-1">
+                {res.map((r,i)=><button key={i} onClick={()=>onSelect(r)} className="w-full text-left p-2 bg-white border rounded-md text-xs hover:bg-cyan-50"><b>{r.category}</b> - {r.date}<br/>S: {r.item.serial}</button>)}
             </div>
         </Modal>
     );
 };
 
-const ShareModal = ({ data, date, onClose, isSharingApp }: { data?: DailyData; date?: string; onClose: () => void, isSharingApp?: boolean }) => {
-    const shareText = isSharingApp 
-        ? "Confira o App Controle de Equipamentos! Organize seu dia a dia." 
-        : `Confira os equipamentos do dia ${date}.`;
-
-    const handleShare = (platform: 'whatsapp' | 'telegram' | 'email') => {
-        let url = '';
-        if (platform === 'whatsapp') url = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-        if (platform === 'telegram') url = `https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(shareText)}`;
-        if (platform === 'email') url = `mailto:?subject=${encodeURIComponent('Controle de Equipamentos')}&body=${encodeURIComponent(shareText)}`;
-        window.open(url, '_blank');
-    };
-
-    return (
-        <Modal onClose={onClose}>
-            <h3 className="text-xl font-bold text-center mb-6 text-gray-700">{isSharingApp ? 'Compartilhar App' : 'Exportar'}</h3>
-             <div className="flex justify-around">
-                <button onClick={() => handleShare('whatsapp')} className="flex flex-col items-center"><IconWhatsapp className="w-12 h-12 text-green-500 mb-1"/><span className="text-xs font-medium">WhatsApp</span></button>
-                <button onClick={() => handleShare('telegram')} className="flex flex-col items-center"><IconTelegram className="w-12 h-12 text-blue-500 mb-1"/><span className="text-xs font-medium">Telegram</span></button>
-                <button onClick={() => handleShare('email')} className="flex flex-col items-center"><IconEmail className="w-12 h-12 text-gray-500 mb-1"/><span className="text-xs font-medium">E-mail</span></button>
-            </div>
-        </Modal>
-    );
-};
-
-const SettingsModal = ({ onClose, onClearData }: { onClose: () => void; onClearData: () => void }) => (
-    <Modal onClose={onClose}>
-        <h3 className="text-xl font-bold text-center mb-6 text-gray-700">Configurações</h3>
-        <div className="space-y-3">
-            <button onClick={onClearData} className="w-full p-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100 hover:bg-red-100 transition-colors flex items-center justify-center gap-2">
-                <IconTrash className="w-5 h-5"/> Limpar Tudo
-            </button>
-             <p className="text-xs text-center text-gray-400 mt-4">Versão Beta v0.0.1b</p>
-        </div>
-    </Modal>
-);
-
-const AboutModal = ({ onClose, onShareClick }: { onClose: () => void; onShareClick: () => void }) => (
-    <Modal onClose={onClose}>
-         <div className="text-center">
-            <CustomMenuIcon className="w-24 h-24 mx-auto mb-4 drop-shadow-xl" />
-            <h2 className="text-2xl font-black text-gray-800 mb-1">Controle de Equipamentos</h2>
-            <p className="text-sm font-mono text-cyan-600 bg-cyan-50 inline-block px-2 py-1 rounded mb-4">V0.0.1b</p>
-            
-            <div className="bg-gray-50 rounded-xl p-4 mb-4 text-left space-y-2 border border-gray-100">
-                <p className="text-sm text-gray-600"><span className="font-bold text-gray-800">Dono:</span> Leo Luz</p>
-                <p className="text-sm text-gray-600">App de gestão otimizado para mobile.</p>
-            </div>
-
-            <button onClick={onShareClick} className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-bold shadow-lg hover:shadow-xl transition-all active:scale-95">
-                Compartilhar App
-            </button>
-         </div>
-    </Modal>
-);
-
-const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string; onConfirm: () => void; onCancel: () => void }) => (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
-        <div className="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl max-w-sm w-full p-6 border border-white/60 transform scale-100 animate-fade-in">
-            <h3 className="text-lg font-bold text-gray-800 mb-3">Confirmação</h3>
-            <p className="text-gray-600 mb-6">{message}</p>
-            <div className="flex justify-end gap-3">
-                <button onClick={onCancel} className="px-4 py-2 text-gray-500 font-medium hover:bg-gray-100 rounded-lg">Cancelar</button>
-                <button onClick={onConfirm} className="px-4 py-2 bg-red-500 text-white font-bold rounded-lg hover:bg-red-600 shadow-md">Confirmar</button>
+const ConfirmationModal = ({ message, onConfirm, onCancel }: any) => (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
+        <div className="bg-white/95 p-6 rounded-xl shadow-2xl max-w-xs w-full">
+            <p className="text-slate-700 mb-4 font-medium">{message}</p>
+            <div className="flex justify-end gap-2">
+                <button onClick={onCancel} className="px-3 py-1 text-slate-500 font-bold">Cancelar</button>
+                <button onClick={onConfirm} className="px-3 py-1 bg-red-500 text-white rounded-lg font-bold">Confirmar</button>
             </div>
         </div>
     </div>
 );
-
-const PhotoGalleryModal = ({ item, onClose, onUpdatePhotos, setConfirmation }: { item: EquipmentItem; onClose: () => void; onUpdatePhotos: (photos: string[]) => void; setConfirmation: any }) => {
-    const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
-    const photos = item.photos;
-
-    if (photos.length === 0) return null;
-
-    const handleDelete = () => {
-        setConfirmation({
-            message: "Excluir esta foto?",
-            onConfirm: () => {
-                const newPhotos = photos.filter((_, i) => i !== currentPhotoIndex);
-                onUpdatePhotos(newPhotos);
-                if (newPhotos.length === 0) onClose();
-                else setCurrentPhotoIndex(prev => Math.min(prev, newPhotos.length - 1));
-            }
-        });
-    };
-
-    const handleShare = async () => {
-        const base64 = photos[currentPhotoIndex];
-        const blob = await (await fetch(base64)).blob();
-        const file = new File([blob], "photo.jpg", { type: "image/jpeg" });
-        if (navigator.share) {
-            try { await navigator.share({ files: [file] }); } catch (e) { console.log(e); }
-        } else {
-            alert("Compartilhamento nativo não suportado.");
-        }
-    };
-    
-    const handleDownload = () => {
-         const link = document.createElement("a");
-         link.href = photos[currentPhotoIndex];
-         link.download = `equipamento-${item.serial || 'foto'}-${currentPhotoIndex + 1}.jpg`;
-         link.click();
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black/90 flex flex-col backdrop-blur-md">
-            <div className="flex justify-between items-center p-4 text-white">
-                <span className="font-mono text-sm opacity-70">{currentPhotoIndex + 1} / {photos.length}</span>
-                <button onClick={onClose} className="p-2 bg-white/10 rounded-full"><IconX className="w-6 h-6"/></button>
-            </div>
-            
-            <div className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-                 <img src={photos[currentPhotoIndex]} alt="Equipment" className="max-h-full max-w-full object-contain rounded-lg shadow-2xl" />
-                 
-                 {photos.length > 1 && (
-                     <>
-                        <button onClick={() => setCurrentPhotoIndex(i => (i > 0 ? i - 1 : photos.length - 1))} className="absolute left-4 p-2 bg-black/50 text-white rounded-full"><IconChevronLeft/></button>
-                        <button onClick={() => setCurrentPhotoIndex(i => (i < photos.length - 1 ? i + 1 : 0))} className="absolute right-4 p-2 bg-black/50 text-white rounded-full"><IconChevronRight/></button>
-                     </>
-                 )}
-            </div>
-
-            <div className="p-6 bg-black/40 backdrop-blur-xl flex justify-around items-center pb-safe">
-                <button onClick={handleDelete} className="flex flex-col items-center text-red-400 hover:text-red-300 gap-1"><IconTrash className="w-6 h-6"/><span className="text-xs">Excluir</span></button>
-                <button onClick={handleDownload} className="flex flex-col items-center text-blue-400 hover:text-blue-300 gap-1"><IconSave className="w-6 h-6"/><span className="text-xs">Baixar</span></button>
-                <button onClick={handleShare} className="flex flex-col items-center text-green-400 hover:text-green-300 gap-1"><IconShare className="w-6 h-6"/><span className="text-xs">Compartilhar</span></button>
-            </div>
-        </div>
-    );
-};
-
-const CameraModal = ({ onClose, onCapture }: { onClose: () => void; onCapture: (photo: string, code?: string) => void }) => {
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const [error, setError] = useState<string|null>(null);
-
-    useEffect(() => {
-        let stream: MediaStream;
-        const startCamera = async () => {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    // Experimental Barcode Detection
-                    if ('BarcodeDetector' in window) {
-                        const barcodeDetector = new (window as any).BarcodeDetector({ formats: ['qr_code', 'code_128', 'ean_13'] });
-                        const detect = setInterval(async () => {
-                             if (videoRef.current) {
-                                 try {
-                                     const barcodes = await barcodeDetector.detect(videoRef.current);
-                                     if (barcodes.length > 0) {
-                                         clearInterval(detect);
-                                         // Flash effect or sound could go here
-                                         onCapture('', barcodes[0].rawValue);
-                                     }
-                                 } catch(e) {}
-                             }
-                        }, 500);
-                    }
-                }
-            } catch (e) {
-                setError("Erro ao acessar a câmera. Verifique as permissões.");
-            }
-        };
-        startCamera();
-        return () => { if (stream) stream.getTracks().forEach(t => t.stop()); };
-    }, []);
-
-    const takePhoto = () => {
-        if (videoRef.current) {
-            const canvas = document.createElement('canvas');
-            canvas.width = videoRef.current.videoWidth;
-            canvas.height = videoRef.current.videoHeight;
-            canvas.getContext('2d')?.drawImage(videoRef.current, 0, 0);
-            onCapture(canvas.toDataURL('image/jpeg'));
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col">
-            <div className="relative flex-1 bg-black flex items-center justify-center overflow-hidden">
-                {error ? <p className="text-white p-4 text-center">{error}</p> : <video ref={videoRef} autoPlay playsInline className="absolute w-full h-full object-cover" />}
-                 <div className="absolute inset-0 border-2 border-white/30 pointer-events-none flex items-center justify-center">
-                    <div className="w-64 h-64 border-2 border-white/50 rounded-lg relative">
-                        <div className="absolute top-0 left-0 w-4 h-4 border-t-4 border-l-4 border-cyan-400 -mt-1 -ml-1"></div>
-                        <div className="absolute top-0 right-0 w-4 h-4 border-t-4 border-r-4 border-cyan-400 -mt-1 -mr-1"></div>
-                        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-4 border-l-4 border-cyan-400 -mb-1 -ml-1"></div>
-                        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-4 border-r-4 border-cyan-400 -mb-1 -mr-1"></div>
-                    </div>
-                </div>
-                <button onClick={onClose} className="absolute top-4 right-4 p-2 bg-black/50 rounded-full text-white"><IconX className="w-8 h-8"/></button>
-            </div>
-            <div className="p-8 bg-black/80 flex justify-center pb-safe">
-                <button onClick={takePhoto} className="w-16 h-16 rounded-full bg-white border-4 border-gray-300 shadow-lg active:scale-95 transition-transform"></button>
-            </div>
-        </div>
-    );
-};
-
-const SearchModal = ({ onClose, appData, onSelect }: { onClose: () => void; appData: AppData; onSelect: (res: any) => void }) => {
-    const [query, setQuery] = useState('');
-    const results = useMemo(() => {
-        if (query.length < 2) return [];
-        const res: any[] = [];
-        const q = query.toLowerCase();
-        Object.entries(appData).forEach(([date, dayData]) => {
-            Object.entries(dayData).forEach(([cat, items]) => {
-                (items as EquipmentItem[]).forEach(item => {
-                    if (item.serial.toLowerCase().includes(q) || item.contract.toLowerCase().includes(q)) {
-                        res.push({ date, category: cat, item });
-                    }
-                });
-            });
-        });
-        return res.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    }, [query, appData]);
-
-    return (
-        <Modal onClose={onClose}>
-             <h3 className="text-xl font-bold text-gray-700 mb-4">Buscar Equipamento</h3>
-             <div className="relative mb-4">
-                 <IconSearch className="absolute left-3 top-2.5 w-5 h-5 text-gray-400"/>
-                 <input 
-                    autoFocus
-                    className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400 outline-none" 
-                    placeholder="Digite Serial ou Contrato..."
-                    value={query}
-                    onChange={e => setQuery(e.target.value)}
-                 />
-             </div>
-             <div className="max-h-60 overflow-y-auto space-y-2">
-                 {results.length === 0 && query.length > 1 && <p className="text-center text-gray-400 text-sm py-4">Nenhum resultado encontrado.</p>}
-                 {results.map((res, idx) => (
-                     <button key={idx} onClick={() => onSelect(res)} className="w-full text-left p-3 bg-white border border-gray-100 rounded-lg hover:bg-cyan-50 transition-colors shadow-sm">
-                         <div className="flex justify-between items-center mb-1">
-                             <span className="text-xs font-bold text-cyan-600 bg-cyan-50 px-1.5 py-0.5 rounded">{res.category}</span>
-                             <span className="text-xs text-gray-400">{res.date}</span>
-                         </div>
-                         <div className="text-sm text-gray-700">
-                             <span className="font-semibold">S:</span> {res.item.serial} <span className="mx-1 text-gray-300">|</span> <span className="font-semibold">C:</span> {res.item.contract}
-                         </div>
-                     </button>
-                 ))}
-             </div>
-        </Modal>
-    );
-};
-
-export default App;
