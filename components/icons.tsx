@@ -1,18 +1,16 @@
-
 import React from 'react';
 
-// NEW: Galaxy S25 Style Icon with Purple-Blue-Pink Gradient
+// Galaxy S25 Style Icon with Purple-Blue-Pink Gradient inside
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      {/* Purple -> Blue -> Pink Gradient */}
       <linearGradient id="bgGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#a855f7" /> {/* Purple */}
-        <stop offset="50%" stopColor="#3b82f6" /> {/* Blue */}
-        <stop offset="100%" stopColor="#ec4899" /> {/* Pink */}
+        <stop offset="0%" stopColor="#4c1d95" /> 
+        <stop offset="40%" stopColor="#a855f7" /> 
+        <stop offset="60%" stopColor="#3b82f6" /> 
+        <stop offset="100%" stopColor="#ec4899" /> 
       </linearGradient>
 
-      {/* Projected Drop Shadow */}
       <filter id="projectedShadow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
         <feOffset dx="0" dy="6" result="offsetblur"/>
@@ -24,7 +22,6 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
         </feMerge>
       </filter>
 
-      {/* Streaming Box Body */}
       <linearGradient id="boxBody" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#222" />
         <stop offset="100%" stopColor="#000" />
@@ -32,18 +29,12 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
     </defs>
     
     <g filter="url(#projectedShadow)">
-        {/* Container: Squircle with Gradient and Glass Border */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#bgGrad)" stroke="white" strokeWidth="2" strokeOpacity="0.6" />
-        
-        {/* Glass Shine */}
-        <path d="M 5 35 Q 50 5 95 35" fill="none" stroke="white" strokeWidth="2" opacity="0.4" />
-        
-        {/* 3D Streaming Box Object */}
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#bgGrad)" stroke="white" strokeWidth="3" strokeOpacity="0.9" />
+        <path d="M 5 35 Q 50 5 95 35" fill="none" stroke="white" strokeWidth="2" opacity="0.6" />
         <g transform="translate(25, 30) scale(0.5)">
             <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#boxBody)" stroke="#444" strokeWidth="1" />
             <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="black" stroke="#111" strokeWidth="1" />
             <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="#1a1a1a" stroke="#555" strokeWidth="1" />
-            {/* LED */}
             <circle cx="85" cy="48" r="6" fill="#3b82f6" filter="blur(2px)" />
             <circle cx="85" cy="48" r="2" fill="#ffffff" />
         </g>

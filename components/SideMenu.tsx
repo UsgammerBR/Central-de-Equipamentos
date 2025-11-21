@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { IconCalendar, IconSave, IconExport, IconSettings, IconInfo, IconX, CustomMenuIcon } from './icons';
 
