@@ -1,9 +1,8 @@
-
 import React, { Component, useState, useEffect, useReducer, useRef, useMemo } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
     CustomMenuIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
-    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave
+    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave, IconStack
 } from './components/icons';
 import { EquipmentCategory, AppData, DailyData, EquipmentItem } from './types';
 import { CATEGORIES } from './constants';
@@ -134,7 +133,7 @@ const isItemActive = (item: EquipmentItem): boolean => {
 interface ErrorBoundaryProps { children?: React.ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -333,7 +332,6 @@ const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
         className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md border border-white/20 ${
             isPrimary ? 'bg-cyan-500 text-white' : 
             isDanger ? 'bg-red-500/20 text-red-500' :
-            // Increased transparency (bg-white/10) and high blur to show watermark
             'bg-white/10 text-slate-600 hover:bg-white/20 backdrop-blur-md' 
         }`}
     >
@@ -341,23 +339,83 @@ const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
     </button>
 );
 
-const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }: any) => (
-    <div onClick={onActivate} className="group">
-        <h2 className={`text-lg font-bold text-slate-700 drop-shadow-sm uppercase tracking-widest mb-2 ml-2 transition-colors ${isActive ? 'text-cyan-600' : ''}`}>{category}</h2>
-        <section className={`p-2 bg-white/40 backdrop-blur-lg border-t border-l border-white/60 border-b border-r border-white/20 rounded-xl shadow-lg transition-all duration-300 ${isActive ? 'ring-1 ring-cyan-200/60 scale-[1.01]' : ''}`}>
-            <div className="space-y-2">
-                {items.map((item: any) => (
-                    <EquipmentRow 
-                        key={item.id} item={item} onUpdate={onUpdateItem} isDeleteMode={isDeleteMode}
-                        isSelected={selectedItems.includes(item.id)} onToggleSelect={() => onToggleSelect(item.id)} 
-                        onViewGallery={() => onViewGallery(item)} onOpenCamera={() => onOpenCamera(item)}
-                        onFocus={() => onActivate()}
-                    />
-                ))}
+// Updated EquipmentSection with "Accordion / Card Stack" logic controlled by a 3D Button
+const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }: any) => {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    const activeItems = items.filter((i: EquipmentItem) => isItemActive(i));
+    const historyItems = items.slice(0, -1); 
+    const inputItem = items[items.length - 1];
+
+    const toggleExpand = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        setIsExpanded(!isExpanded);
+        onActivate();
+    };
+
+    return (
+        <div onClick={onActivate} className={`group transition-all duration-300 ${isActive ? 'scale-[1.01]' : 'scale-100'}`}>
+            {/* Header / Card Top */}
+            <div className="flex items-center justify-between bg-white/60 backdrop-blur-xl border-t border-l border-white/80 border-b border-r border-white/30 rounded-t-xl p-3 shadow-sm transition-colors">
+                <div className="flex items-center gap-2">
+                    <h2 className={`text-lg font-bold text-slate-700 drop-shadow-sm uppercase tracking-widest ${isActive ? 'text-cyan-600' : ''}`}>
+                        {category}
+                    </h2>
+                    
+                    {/* 3D Collapse/Expand Button */}
+                    <button 
+                        onClick={toggleExpand}
+                        className={`
+                            ml-2 w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 transition-all
+                            bg-slate-100 shadow-[2px_2px_5px_rgba(0,0,0,0.1),-1px_-1px_2px_rgba(255,255,255,0.8)]
+                            active:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)] active:scale-95 active:translate-y-0.5
+                            border border-white/50
+                            ${isExpanded ? 'bg-cyan-50 text-cyan-600' : ''}
+                        `}
+                    >
+                        <IconStack className="w-5 h-5" />
+                    </button>
+
+                    {activeItems.length > 0 && (
+                        <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded-full text-[10px] font-bold">
+                            {activeItems.length}
+                        </span>
+                    )}
+                </div>
             </div>
-        </section>
-    </div>
-);
+
+            {/* Body / Stack Effect */}
+            <section className={`
+                relative bg-white/40 backdrop-blur-lg border-l border-r border-b border-white/40 rounded-b-xl shadow-[0_8px_0_-4px_rgba(255,255,255,0.5),0_16px_0_-8px_rgba(255,255,255,0.3)] transition-all duration-500 overflow-hidden
+                ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-[60px] opacity-95'}
+            `}>
+                <div className="p-2 space-y-2">
+                    {/* History Items (Hidden when collapsed) */}
+                    <div className={`space-y-2 transition-all duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
+                        {historyItems.map((item: any) => (
+                            <EquipmentRow 
+                                key={item.id} item={item} onUpdate={onUpdateItem} isDeleteMode={isDeleteMode}
+                                isSelected={selectedItems.includes(item.id)} onToggleSelect={() => onToggleSelect(item.id)} 
+                                onViewGallery={() => onViewGallery(item)} onOpenCamera={() => onOpenCamera(item)}
+                                onFocus={() => onActivate()}
+                            />
+                        ))}
+                    </div>
+
+                    {/* Input Item (Always Visible at bottom) */}
+                    <div className="relative z-10">
+                         <EquipmentRow 
+                            item={inputItem} onUpdate={onUpdateItem} isDeleteMode={isDeleteMode}
+                            isSelected={selectedItems.includes(inputItem.id)} onToggleSelect={() => onToggleSelect(inputItem.id)} 
+                            onViewGallery={() => onViewGallery(inputItem)} onOpenCamera={() => onOpenCamera(inputItem)}
+                            onFocus={() => onActivate()}
+                        />
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
+};
 
 const EquipmentRow = ({ item, onUpdate, isDeleteMode, isSelected, onToggleSelect, onViewGallery, onOpenCamera, onFocus }: any) => {
     const handleChange = (field: keyof EquipmentItem, value: string) => {

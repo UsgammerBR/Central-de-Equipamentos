@@ -1,15 +1,15 @@
 import React from 'react';
 
-// Milky Glass 3D Icon with Split Gradient (Dark Purple -> Light Purple | Light Blue -> Dark Blue)
+// Totally 3D Icon with Half Purple / Half Blue Gradient
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      {/* Split Gradient: Dark Purple -> Milky Purple | Milky Blue -> Dark Blue */}
-      <linearGradient id="milkyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#4c1d95" />   {/* Dark Purple */}
-        <stop offset="45%" stopColor="#e9d5ff" />  {/* Milky Light Purple */}
-        <stop offset="55%" stopColor="#bfdbfe" />  {/* Milky Light Blue */}
-        <stop offset="100%" stopColor="#172554" /> {/* Dark Blue */}
+      {/* Half Purple (Top) / Half Blue (Bottom) Gradient */}
+      <linearGradient id="halfGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#7c3aed" />   {/* Purple */}
+        <stop offset="45%" stopColor="#8b5cf6" />  {/* Light Purple transition */}
+        <stop offset="55%" stopColor="#3b82f6" />  {/* Light Blue transition */}
+        <stop offset="100%" stopColor="#1d4ed8" /> {/* Blue */}
       </linearGradient>
 
       {/* Strong Projected Shadow for 3D effect */}
@@ -32,17 +32,14 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
     </defs>
     
     <g filter="url(#strongShadow)">
-        {/* Main Container shape with Gradient */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#milkyGrad)" />
+        {/* Main Container shape with Half/Half Gradient */}
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#halfGrad)" />
         
-        {/* Milky White Overlay for "Leitoso" effect */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="white" fillOpacity="0.15" />
-
         {/* Glass Bevel / Border */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="3" strokeOpacity="0.8" />
+        <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="3" strokeOpacity="0.6" />
         
-        {/* Top Glare */}
-        <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="2" opacity="0.5" />
+        {/* Top Glare for 3D Glass Effect */}
+        <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="2" opacity="0.4" />
         
         {/* The 3D Streaming Box Content */}
         <g transform="translate(25, 30) scale(0.5)">
@@ -174,6 +171,24 @@ export const IconChevronLeft = ({ className = 'w-6 h-6' }: { className?: string 
 export const IconChevronRight = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+  </svg>
+);
+
+export const IconChevronDown = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+  </svg>
+);
+
+export const IconChevronUp = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+  </svg>
+);
+
+export const IconStack = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
   </svg>
 );
 
