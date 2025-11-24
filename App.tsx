@@ -2,7 +2,7 @@ import React, { Component, useState, useEffect, useReducer, useRef, useMemo } fr
 import { SideMenu } from './components/SideMenu';
 import { 
     CustomMenuIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
-    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave, IconStack
+    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave, IconStack, IconChevronDown, IconChevronUp
 } from './components/icons';
 import { EquipmentCategory, AppData, DailyData, EquipmentItem } from './types';
 import { CATEGORIES } from './constants';
@@ -25,6 +25,7 @@ const createEmptyDailyData = (): DailyData => {
   }, {} as DailyData);
 
   CATEGORIES.forEach(category => {
+    // Removed QT initialization, kept blank string just in case of legacy type issues, but won't be used in UI
     data[category].push({ id: generateId(), qt: '', contract: '', serial: '', photos: [] });
   });
 
@@ -125,7 +126,8 @@ const dataReducer = (state: AppData, action: Action): AppData => {
 }
 
 const isItemActive = (item: EquipmentItem): boolean => {
-    return (item.qt && item.qt.trim() !== '') || (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
+    // QT removed from check since it's hidden, but kept in DB
+    return (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
 };
 
 // --- ERROR BOUNDARY ---
@@ -173,19 +175,30 @@ const AppContent = () => {
     dispatch(action);
   };
 
+  // LOAD DATA ON START
   useEffect(() => {
     const savedData = localStorage.getItem('equipmentData');
-    if (savedData) dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
+    if (savedData) {
+        try {
+            dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
+        } catch (e) {
+            console.error("Failed to load data", e);
+        }
+    }
   }, []);
 
+  // ENSURE CURRENT DAY EXISTS
   useEffect(() => {
     if (!appData[formattedDate]) {
       dispatch({ type: 'ENSURE_DAY_DATA', payload: { date: formattedDate, dayData: createEmptyDailyData() } });
     }
   }, [appData, formattedDate]);
 
+  // SAVE DATA ON CHANGE
   useEffect(() => {
-    if (!isRestoring) localStorage.setItem('equipmentData', JSON.stringify(appData));
+    if (!isRestoring && Object.keys(appData).length > 0) {
+        localStorage.setItem('equipmentData', JSON.stringify(appData));
+    }
   }, [appData, isRestoring]);
 
   const currentDayData: DailyData = appData[formattedDate] || createEmptyDailyData();
@@ -232,9 +245,9 @@ const AppContent = () => {
       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }}/>
       
       <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-xl pt-4 pb-2 px-4 relative overflow-hidden shadow-sm border-b border-white/10">
-        {/* Watermark */}
-        <div className="absolute top-6 inset-x-0 flex items-center justify-center pointer-events-none z-0">
-             <span className="text-3xl font-black text-slate-300 opacity-60 uppercase tracking-widest whitespace-nowrap transform scale-150 drop-shadow-sm blur-[0.5px]">EQUIPAMENTOS</span>
+        {/* Watermark - Reduced size, behind menu and buttons */}
+        <div className="absolute top-6 left-16 right-0 flex items-center justify-start pointer-events-none z-0">
+             <span className="text-[10px] md:text-xl font-black text-slate-300 opacity-60 uppercase tracking-widest whitespace-nowrap drop-shadow-sm blur-[0.5px]">EQUIPAMENTOS</span>
         </div>
 
         <div className="container mx-auto relative z-10">
@@ -244,7 +257,6 @@ const AppContent = () => {
                 </button>
 
                 <div className="flex items-center gap-3">
-                    {/* Smaller, transparent buttons */}
                     <ActionButton onClick={handleAddItem}><IconPlus className="w-4 h-4" /></ActionButton>
                     <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode}><IconMinus className="w-4 h-4" /></ActionButton>
                     {isGlobalDeleteMode && Object.values(selectedItems).reduce<number>((acc, items: string[]) => acc + items.length, 0) > 0 && (
@@ -339,7 +351,7 @@ const ActionButton = ({ children, onClick, isPrimary, isDanger }: any) => (
     </button>
 );
 
-// Updated EquipmentSection with "Accordion / Card Stack" logic controlled by a 3D Button
+// Updated EquipmentSection with Collapsible Stack (Accordion)
 const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isActive, onActivate, onOpenCamera }: any) => {
     const [isExpanded, setIsExpanded] = useState(false);
 
@@ -355,42 +367,41 @@ const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDele
 
     return (
         <div onClick={onActivate} className={`group transition-all duration-300 ${isActive ? 'scale-[1.01]' : 'scale-100'}`}>
-            {/* Header / Card Top */}
+            {/* Header */}
             <div className="flex items-center justify-between bg-white/60 backdrop-blur-xl border-t border-l border-white/80 border-b border-r border-white/30 rounded-t-xl p-3 shadow-sm transition-colors">
                 <div className="flex items-center gap-2">
                     <h2 className={`text-lg font-bold text-slate-700 drop-shadow-sm uppercase tracking-widest ${isActive ? 'text-cyan-600' : ''}`}>
                         {category}
                     </h2>
-                    
-                    {/* 3D Collapse/Expand Button */}
-                    <button 
-                        onClick={toggleExpand}
-                        className={`
-                            ml-2 w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 transition-all
-                            bg-slate-100 shadow-[2px_2px_5px_rgba(0,0,0,0.1),-1px_-1px_2px_rgba(255,255,255,0.8)]
-                            active:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)] active:scale-95 active:translate-y-0.5
-                            border border-white/50
-                            ${isExpanded ? 'bg-cyan-50 text-cyan-600' : ''}
-                        `}
-                    >
-                        <IconStack className="w-5 h-5" />
-                    </button>
-
                     {activeItems.length > 0 && (
                         <span className="px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded-full text-[10px] font-bold">
                             {activeItems.length}
                         </span>
                     )}
                 </div>
+
+                {/* Stack Button - Aligned Right */}
+                <button 
+                    onClick={toggleExpand}
+                    className={`
+                        ml-auto w-8 h-8 rounded-lg flex items-center justify-center text-slate-600 transition-all
+                        bg-slate-100 shadow-[2px_2px_5px_rgba(0,0,0,0.1),-1px_-1px_2px_rgba(255,255,255,0.8)]
+                        active:shadow-[inset_2px_2px_5px_rgba(0,0,0,0.1)] active:scale-95 active:translate-y-0.5
+                        border border-white/50
+                        ${isExpanded ? 'bg-cyan-50 text-cyan-600' : ''}
+                    `}
+                >
+                    <IconStack className="w-5 h-5" />
+                </button>
             </div>
 
-            {/* Body / Stack Effect */}
+            {/* Body - Stack/Accordion Effect */}
             <section className={`
                 relative bg-white/40 backdrop-blur-lg border-l border-r border-b border-white/40 rounded-b-xl shadow-[0_8px_0_-4px_rgba(255,255,255,0.5),0_16px_0_-8px_rgba(255,255,255,0.3)] transition-all duration-500 overflow-hidden
                 ${isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-[60px] opacity-95'}
             `}>
                 <div className="p-2 space-y-2">
-                    {/* History Items (Hidden when collapsed) */}
+                    {/* History Items */}
                     <div className={`space-y-2 transition-all duration-500 ${isExpanded ? 'opacity-100' : 'opacity-0 hidden'}`}>
                         {historyItems.map((item: any) => (
                             <EquipmentRow 
@@ -402,7 +413,7 @@ const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDele
                         ))}
                     </div>
 
-                    {/* Input Item (Always Visible at bottom) */}
+                    {/* Input Item - Always Visible */}
                     <div className="relative z-10">
                          <EquipmentRow 
                             item={inputItem} onUpdate={onUpdateItem} isDeleteMode={isDeleteMode}
@@ -417,6 +428,7 @@ const EquipmentSection = ({ category, items, onUpdateItem, onViewGallery, isDele
     );
 };
 
+// Updated Row: QT REMOVED
 const EquipmentRow = ({ item, onUpdate, isDeleteMode, isSelected, onToggleSelect, onViewGallery, onOpenCamera, onFocus }: any) => {
     const handleChange = (field: keyof EquipmentItem, value: string) => {
         onUpdate({ ...item, [field]: value });
@@ -428,29 +440,24 @@ const EquipmentRow = ({ item, onUpdate, isDeleteMode, isSelected, onToggleSelect
                 <input type="checkbox" checked={isSelected} onChange={onToggleSelect} className="w-5 h-5 accent-red-500 mr-1 ml-1" />
             )}
             
-            <InputWithLabel 
-                value={item.qt} 
-                onChange={(e) => { if(e.target.value.length <= 2) handleChange('qt', e.target.value) }}
-                placeholder="QT" 
-                type="number" 
-                containerClassName="w-9"
-                onFocus={onFocus}
-            />
+            {/* QT INPUT REMOVED HERE */}
 
+            {/* Contract - 35% Width */}
             <InputWithLabel 
                 value={item.contract} 
                 onChange={(e) => { if(e.target.value.length <= 10) handleChange('contract', e.target.value) }}
                 placeholder="Contrato" 
-                containerClassName="flex-[2]"
+                containerClassName="flex-[1]"
                 showClipboard
                 onFocus={onFocus}
             />
 
+            {/* Serial - 65% Width (Larger) */}
             <InputWithLabel 
                 value={item.serial} 
                 onChange={(e) => { if(e.target.value.length <= 20) handleChange('serial', e.target.value) }}
                 placeholder="Serial" 
-                containerClassName="flex-[3]"
+                containerClassName="flex-[2]"
                 showClipboard
                 onFocus={onFocus}
             />
@@ -492,10 +499,8 @@ const InputWithLabel = ({ value, onChange, placeholder, type = "text", container
 const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData, allData: AppData, currentDate: string }) => {
     const calculateTotal = (d: DailyData) => {
         if (!d) return 0;
-        return Object.values(d).flat().filter(isItemActive).reduce((sum, item) => {
-            const qty = parseInt(item.qt);
-            return sum + (isNaN(qty) ? 1 : qty);
-        }, 0);
+        // QT is removed, so we simply count the number of active items
+        return Object.values(d).flat().filter(isItemActive).length;
     };
 
     const totalDay = calculateTotal(data);
@@ -522,7 +527,8 @@ const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData, allDat
              <div className="container mx-auto overflow-x-auto hide-scrollbar">
                 <div className="flex gap-2 pb-1 min-w-max">
                     {CATEGORIES.map(cat => {
-                        const count = (data[cat] || []).filter(isItemActive).reduce((acc, item) => acc + (parseInt(item.qt) || 1), 0);
+                        // QT removed: Just count active rows
+                        const count = (data[cat] || []).filter(isItemActive).length;
                         return (
                             <div key={cat} className="flex flex-col items-center justify-center px-3 py-1 bg-white/50 rounded-lg border border-white shadow-sm min-w-[60px]">
                                 <span className="text-[8px] font-bold text-slate-400 uppercase">{cat.replace('BOX SOUND', 'SOUND').substring(0, 8)}</span>
@@ -544,8 +550,8 @@ const SummaryFooter = ({ data, allData, currentDate }: { data: DailyData, allDat
     );
 };
 
-// --- MODALS (Milky Glass Theme) ---
-
+// ... (Modals remain unchanged) ...
+// Re-including Modals code to ensure file integrity in replacement
 const Modal = ({ title, onClose, children }: any) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-fade-in">
         <div className="bg-white/90 backdrop-blur-2xl rounded-2xl shadow-2xl w-full max-w-md overflow-hidden border border-white/50 animate-slide-in-up">
@@ -617,8 +623,8 @@ const DownloadModal = ({ appData, currentDate, onClose }: any) => {
                     return `
                         <h2 style="background:#eee; padding:5px; border-left: 5px solid #0ea5e9;">${cat}</h2>
                         <table border="1" style="width:100%; border-collapse:collapse;">
-                            <tr style="background:#f9f9f9;"><th>QT</th><th>Contrato</th><th>Serial</th></tr>
-                            ${items.map((item: any) => `<tr><td align="center">${item.qt}</td><td align="center">${item.contract}</td><td align="center">${item.serial}</td></tr>`).join('')}
+                            <tr style="background:#f9f9f9;"><th>Contrato</th><th>Serial</th></tr>
+                            ${items.map((item: any) => `<tr><td align="center">${item.contract}</td><td align="center">${item.serial}</td></tr>`).join('')}
                         </table>
                     `;
                 }).join('')}
@@ -631,11 +637,11 @@ const DownloadModal = ({ appData, currentDate, onClose }: any) => {
                 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
                 <head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body>
                 <table>
-                    <thead><tr><th colspan="4" style="font-size:16px; font-weight:bold;">Relatório - ${label}</th></tr>
-                    <tr><th>Categoria</th><th>QT</th><th>Contrato</th><th>Serial</th></tr></thead>
+                    <thead><tr><th colspan="3" style="font-size:16px; font-weight:bold;">Relatório - ${label}</th></tr>
+                    <tr><th>Categoria</th><th>Contrato</th><th>Serial</th></tr></thead>
                     <tbody>
                     ${CATEGORIES.flatMap(cat => (data[cat]||[]).map((item: any) => 
-                        `<tr><td>${cat}</td><td>${item.qt}</td><td>${item.contract}</td><td>${item.serial}</td></tr>`
+                        `<tr><td>${cat}</td><td>${item.contract}</td><td>${item.serial}</td></tr>`
                     )).join('')}
                     </tbody>
                 </table></body></html>
@@ -691,7 +697,8 @@ const ShareModal = ({ appData, currentDate, onClose, isSharingApp }: any) => {
                 if(items.length > 0) {
                     report += `*${cat}* (${items.length})\n`;
                     items.forEach((item: any) => {
-                        report += `- QT: ${item.qt || 1} | SN: ${item.serial}\n`;
+                        // QT removed from report text
+                        report += `- SN: ${item.serial} | CT: ${item.contract}\n`;
                     });
                     report += '\n';
                 }

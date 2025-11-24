@@ -1,58 +1,45 @@
 import React from 'react';
 
-// Totally 3D Icon with Half Purple / Half Blue Gradient
+// New "STREAM+" Style Icon (Black box on Purple/Blue Glass)
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      {/* Half Purple (Top) / Half Blue (Bottom) Gradient */}
-      <linearGradient id="halfGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#7c3aed" />   {/* Purple */}
-        <stop offset="45%" stopColor="#8b5cf6" />  {/* Light Purple transition */}
-        <stop offset="55%" stopColor="#3b82f6" />  {/* Light Blue transition */}
-        <stop offset="100%" stopColor="#1d4ed8" /> {/* Blue */}
+      {/* Purple to Blue Gradient Background */}
+      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#8b5cf6" /> {/* Violet */}
+        <stop offset="100%" stopColor="#3b82f6" /> {/* Blue */}
       </linearGradient>
-
-      {/* Strong Projected Shadow for 3D effect */}
-      <filter id="strongShadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-        <feOffset dx="0" dy="4" result="offsetblur"/>
-        <feFlood floodColor="#000" floodOpacity="0.5"/>
+      
+      {/* Soft Shadow for the device */}
+      <filter id="deviceShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+        <feOffset dx="0" dy="3" result="offsetblur"/>
+        <feFlood floodColor="#000" floodOpacity="0.6"/>
         <feComposite in2="offsetblur" operator="in"/>
         <feMerge>
           <feMergeNode/>
           <feMergeNode in="SourceGraphic"/>
         </feMerge>
       </filter>
-
-      {/* 3D Box Content Gradients */}
-      <linearGradient id="boxBody" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#333" />
-        <stop offset="100%" stopColor="#000" />
-      </linearGradient>
     </defs>
     
-    <g filter="url(#strongShadow)">
-        {/* Main Container shape with Half/Half Gradient */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#halfGrad)" />
+    {/* Background Container (Glassy Squircle) */}
+    <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#bgGrad)" />
+    <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="2" strokeOpacity="0.5" />
+    <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="1.5" opacity="0.3" />
+
+    {/* The STREAM+ Device */}
+    <g filter="url(#deviceShadow)" transform="translate(20, 32) scale(0.6)">
+        {/* Device Body (Black Matte) */}
+        <rect x="0" y="0" width="100" height="60" rx="12" fill="#1a1a1a" />
+        <rect x="0" y="0" width="100" height="55" rx="12" fill="#262626" /> {/* Top surface */}
         
-        {/* Glass Bevel / Border */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="3" strokeOpacity="0.6" />
+        {/* Engraved Text "STREAM+" */}
+        <text x="50" y="32" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="16" textAnchor="middle" fill="#111" style={{ filter: 'drop-shadow(0px 1px 0px rgba(255,255,255,0.15))' }}>STREAM+</text>
         
-        {/* Top Glare for 3D Glass Effect */}
-        <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="2" opacity="0.4" />
-        
-        {/* The 3D Streaming Box Content */}
-        <g transform="translate(25, 30) scale(0.5)">
-            {/* Top Face */}
-            <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#boxBody)" stroke="#444" strokeWidth="1" />
-            {/* Right Face */}
-            <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="black" stroke="#111" strokeWidth="1" />
-            {/* Left Face */}
-            <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="#1a1a1a" stroke="#555" strokeWidth="1" />
-            {/* Blue LED */}
-            <circle cx="85" cy="48" r="6" fill="#3b82f6" filter="blur(2px)" />
-            <circle cx="85" cy="48" r="2" fill="#ffffff" />
-        </g>
+        {/* LED Indicator */}
+        <circle cx="85" cy="45" r="2.5" fill="#60a5fa" filter="blur(0.5px)" />
+        <circle cx="85" cy="45" r="1" fill="#ffffff" />
     </g>
   </svg>
 );
@@ -187,8 +174,12 @@ export const IconChevronUp = ({ className = 'w-6 h-6' }: { className?: string })
 );
 
 export const IconStack = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24">
+    <path d="M3 6a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm0 6a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm1 5a1 1 0 100 2h16a1 1 0 100-2H4z" />
+    {/* Simple stack representation: 3 rectangles standing/stacked vertically */}
+    <rect x="7" y="2" width="10" height="14" rx="1" fill="currentColor" opacity="0.3" transform="rotate(-10 12 12)"/>
+    <rect x="7" y="2" width="10" height="14" rx="1" fill="currentColor" opacity="0.6" transform="rotate(5 12 12)"/>
+    <rect x="7" y="2" width="10" height="14" rx="1" fill="currentColor" />
   </svg>
 );
 
