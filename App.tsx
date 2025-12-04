@@ -1,3 +1,4 @@
+
 import React, { Component, useState, useEffect, useReducer, useRef, useMemo } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
@@ -136,12 +137,10 @@ interface ErrorBoundaryProps { children?: React.ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
 class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  constructor(props: ErrorBoundaryProps) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
+  // Fix: Explicitly declare state property and initialize it.
+  state: ErrorBoundaryState = { hasError: false, error: null };
   
-  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState { return { hasError: true, error }; }
   
   render() {
     if (this.state.hasError) {

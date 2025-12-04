@@ -1,19 +1,26 @@
+
 import React from 'react';
 
-// New "STREAM+" Style Icon (Black box on Purple/Blue Glass)
+// Exact Replica of the STREAM+ Image provided
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      {/* Purple to Blue Gradient Background */}
+      {/* Background Gradient: Purple (Top-Left) to Blue (Bottom-Right) */}
       <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#8b5cf6" /> {/* Violet */}
+        <stop offset="0%" stopColor="#a855f7" /> {/* Purple */}
         <stop offset="100%" stopColor="#3b82f6" /> {/* Blue */}
       </linearGradient>
-      
-      {/* Soft Shadow for the device */}
+
+      {/* Device Body Gradient to simulate matte black/lighting */}
+      <linearGradient id="deviceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#3f3f46" />
+        <stop offset="100%" stopColor="#18181b" />
+      </linearGradient>
+
+      {/* Shadow for the device to float */}
       <filter id="deviceShadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-        <feOffset dx="0" dy="3" result="offsetblur"/>
+        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+        <feOffset dx="4" dy="6" result="offsetblur"/>
         <feFlood floodColor="#000" floodOpacity="0.6"/>
         <feComposite in2="offsetblur" operator="in"/>
         <feMerge>
@@ -22,24 +29,38 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
         </feMerge>
       </filter>
     </defs>
-    
-    {/* Background Container (Glassy Squircle) */}
-    <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#bgGrad)" />
-    <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="2" strokeOpacity="0.5" />
-    <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="1.5" opacity="0.3" />
 
-    {/* The STREAM+ Device */}
-    <g filter="url(#deviceShadow)" transform="translate(20, 32) scale(0.6)">
-        {/* Device Body (Black Matte) */}
-        <rect x="0" y="0" width="100" height="60" rx="12" fill="#1a1a1a" />
-        <rect x="0" y="0" width="100" height="55" rx="12" fill="#262626" /> {/* Top surface */}
+    {/* 1. Glass Container (Squircle) */}
+    <rect x="5" y="5" width="90" height="90" rx="24" fill="url(#bgGrad)" />
+    
+    {/* Glass Bevel/Border */}
+    <rect x="5" y="5" width="90" height="90" rx="24" fill="none" stroke="white" strokeWidth="2" strokeOpacity="0.5" />
+    <path d="M 10 30 Q 50 10 90 30" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
+
+    {/* 2. The STREAM+ Device (Centered) */}
+    <g filter="url(#deviceShadow)" transform="translate(18, 22) scale(0.65)">
         
-        {/* Engraved Text "STREAM+" */}
-        <text x="50" y="32" fontFamily="Arial, sans-serif" fontWeight="900" fontSize="16" textAnchor="middle" fill="#111" style={{ filter: 'drop-shadow(0px 1px 0px rgba(255,255,255,0.15))' }}>STREAM+</text>
+        {/* Device Main Body */}
+        <rect x="0" y="0" width="100" height="85" rx="14" fill="url(#deviceGrad)" />
         
-        {/* LED Indicator */}
-        <circle cx="85" cy="45" r="2.5" fill="#60a5fa" filter="blur(0.5px)" />
-        <circle cx="85" cy="45" r="1" fill="#ffffff" />
+        {/* Side Details (Ports/Buttons on the right edge) */}
+        <g transform="translate(100, 20)">
+            <path d="M0 0 L5 2 L5 60 L0 62 Z" fill="#27272a" /> {/* Side perspective */}
+            <rect x="-2" y="10" width="4" height="8" rx="2" fill="#18181b" /> {/* Top Button */}
+            <rect x="-2" y="25" width="3" height="15" rx="1" fill="#000" />   {/* Slot */}
+            <rect x="-2" y="48" width="4" height="8" rx="2" fill="#18181b" /> {/* Bottom Button */}
+        </g>
+
+        {/* Diagonal Glossy Reflection on Device */}
+        <path d="M 0 0 L 60 0 L 100 85 L 0 85 Z" fill="white" opacity="0.05" />
+        <path d="M 60 0 L 100 0 L 100 40 Z" fill="white" opacity="0.1" />
+
+        {/* Text "STREAM+" */}
+        <text x="50" y="48" fontFamily="sans-serif" fontWeight="600" fontSize="13" textAnchor="middle" letterSpacing="1" fill="#9ca3af" opacity="0.8">STREAM+</text>
+        
+        {/* LED Light */}
+        <circle cx="85" cy="65" r="2.5" fill="#bae6fd" filter="drop-shadow(0 0 3px #3b82f6)" />
+        <circle cx="85" cy="65" r="1" fill="white" />
     </g>
   </svg>
 );
@@ -175,11 +196,16 @@ export const IconChevronUp = ({ className = 'w-6 h-6' }: { className?: string })
 
 export const IconStack = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24">
-    <path d="M3 6a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm0 6a1 1 0 011-1h16a1 1 0 110 2H4a1 1 0 01-1-1zm1 5a1 1 0 100 2h16a1 1 0 100-2H4z" />
-    {/* Simple stack representation: 3 rectangles standing/stacked vertically */}
-    <rect x="7" y="2" width="10" height="14" rx="1" fill="currentColor" opacity="0.3" transform="rotate(-10 12 12)"/>
-    <rect x="7" y="2" width="10" height="14" rx="1" fill="currentColor" opacity="0.6" transform="rotate(5 12 12)"/>
-    <rect x="7" y="2" width="10" height="14" rx="1" fill="currentColor" />
+    {/* Standing Cards Representation */}
+    <rect x="7" y="4" width="10" height="14" rx="1" fill="currentColor" opacity="0.4" transform="translate(-2, 0)"/>
+    <rect x="7" y="4" width="10" height="14" rx="1" fill="currentColor" opacity="0.7" transform="translate(0, 0)"/>
+    <rect x="7" y="4" width="10" height="14" rx="1" fill="currentColor" transform="translate(2, 0)"/>
+  </svg>
+);
+
+export const IconExclamation = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
   </svg>
 );
 
@@ -203,12 +229,12 @@ export const IconWhatsapp = ({ className = 'w-6 h-6' }: { className?: string }) 
 
 export const IconTelegram = ({ className = 'w-6 h-6' }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 11.944 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
     </svg>
 );
 
 export const IconEmail = ({ className = 'w-6 h-6' }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+  </svg>
 );
