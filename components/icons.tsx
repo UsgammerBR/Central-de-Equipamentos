@@ -1,27 +1,26 @@
-
 import React from 'react';
 
-// Exact Replica of the STREAM+ Image provided
+// Exact replica of STREAM+ device icon
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
     <defs>
-      {/* Background Gradient: Purple (Top-Left) to Blue (Bottom-Right) */}
-      <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      {/* Background Gradient: Vibrant Purple to Blue */}
+      <linearGradient id="streamGrad" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#a855f7" /> {/* Purple */}
-        <stop offset="100%" stopColor="#3b82f6" /> {/* Blue */}
+        <stop offset="100%" stopColor="#2563eb" /> {/* Blue */}
+      </linearGradient>
+      
+      {/* Device Body Gradient (Subtle lighting on black) */}
+      <linearGradient id="deviceBody" x1="50%" y1="0%" x2="50%" y2="100%">
+        <stop offset="0%" stopColor="#333333" />
+        <stop offset="100%" stopColor="#111111" />
       </linearGradient>
 
-      {/* Device Body Gradient to simulate matte black/lighting */}
-      <linearGradient id="deviceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#3f3f46" />
-        <stop offset="100%" stopColor="#18181b" />
-      </linearGradient>
-
-      {/* Shadow for the device to float */}
-      <filter id="deviceShadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-        <feOffset dx="4" dy="6" result="offsetblur"/>
-        <feFlood floodColor="#000" floodOpacity="0.6"/>
+      {/* Shadow Filter */}
+      <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
+        <feOffset dx="0" dy="3" result="offsetblur"/>
+        <feFlood floodColor="#000" floodOpacity="0.5"/>
         <feComposite in2="offsetblur" operator="in"/>
         <feMerge>
           <feMergeNode/>
@@ -29,38 +28,31 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
         </feMerge>
       </filter>
     </defs>
-
-    {/* 1. Glass Container (Squircle) */}
-    <rect x="5" y="5" width="90" height="90" rx="24" fill="url(#bgGrad)" />
     
-    {/* Glass Bevel/Border */}
-    <rect x="5" y="5" width="90" height="90" rx="24" fill="none" stroke="white" strokeWidth="2" strokeOpacity="0.5" />
-    <path d="M 10 30 Q 50 10 90 30" fill="none" stroke="white" strokeWidth="1" opacity="0.4" />
+    {/* 1. Glass Container */}
+    <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#streamGrad)" />
+    
+    {/* Glass Border/Bevel */}
+    <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
+    
+    {/* Top Shine/Gloss */}
+    <path d="M 10 28 Q 50 10 90 28" fill="none" stroke="white" strokeWidth="1" opacity="0.3" />
 
-    {/* 2. The STREAM+ Device (Centered) */}
-    <g filter="url(#deviceShadow)" transform="translate(18, 22) scale(0.65)">
+    {/* 2. The STREAM+ Device */}
+    <g filter="url(#dropShadow)" transform="translate(20, 30) scale(0.6)">
+        {/* Main Body */}
+        <rect x="0" y="0" width="100" height="60" rx="10" fill="url(#deviceBody)" />
         
-        {/* Device Main Body */}
-        <rect x="0" y="0" width="100" height="85" rx="14" fill="url(#deviceGrad)" />
-        
-        {/* Side Details (Ports/Buttons on the right edge) */}
-        <g transform="translate(100, 20)">
-            <path d="M0 0 L5 2 L5 60 L0 62 Z" fill="#27272a" /> {/* Side perspective */}
-            <rect x="-2" y="10" width="4" height="8" rx="2" fill="#18181b" /> {/* Top Button */}
-            <rect x="-2" y="25" width="3" height="15" rx="1" fill="#000" />   {/* Slot */}
-            <rect x="-2" y="48" width="4" height="8" rx="2" fill="#18181b" /> {/* Bottom Button */}
-        </g>
-
-        {/* Diagonal Glossy Reflection on Device */}
-        <path d="M 0 0 L 60 0 L 100 85 L 0 85 Z" fill="white" opacity="0.05" />
-        <path d="M 60 0 L 100 0 L 100 40 Z" fill="white" opacity="0.1" />
+        {/* Top Edge Highlight */}
+        <path d="M 10 1 L 90 1" stroke="#555" strokeWidth="1" opacity="0.5" />
 
         {/* Text "STREAM+" */}
-        <text x="50" y="48" fontFamily="sans-serif" fontWeight="600" fontSize="13" textAnchor="middle" letterSpacing="1" fill="#9ca3af" opacity="0.8">STREAM+</text>
+        <text x="50" y="35" fontFamily="sans-serif" fontWeight="bold" fontSize="14" textAnchor="middle" fill="#222" stroke="rgba(255,255,255,0.1)" strokeWidth="0.5">STREAM+</text>
+        <text x="50" y="35" fontFamily="sans-serif" fontWeight="bold" fontSize="14" textAnchor="middle" fill="#000" opacity="0.7">STREAM+</text>
         
         {/* LED Light */}
-        <circle cx="85" cy="65" r="2.5" fill="#bae6fd" filter="drop-shadow(0 0 3px #3b82f6)" />
-        <circle cx="85" cy="65" r="1" fill="white" />
+        <circle cx="85" cy="48" r="2" fill="#60a5fa" filter="drop-shadow(0 0 2px #60a5fa)" />
+        <circle cx="85" cy="48" r="0.8" fill="white" />
     </g>
   </svg>
 );
@@ -236,17 +228,5 @@ export const IconTelegram = ({ className = 'w-6 h-6' }: { className?: string }) 
 export const IconEmail = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-  </svg>
-);
-
-export const IconBell = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-  </svg>
-);
-
-export const IconRefresh = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-     <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
   </svg>
 );
