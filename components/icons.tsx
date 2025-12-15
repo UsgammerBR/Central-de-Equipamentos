@@ -1,58 +1,93 @@
 import React from 'react';
 
-// Totally 3D Icon with Half Purple / Half Blue Gradient
+// Stream+ iOS Style App Icon (Glass & 3D Box) - Hyper Realistic Render Style
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className}>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
     <defs>
-      {/* Half Purple (Top) / Half Blue (Bottom) Gradient */}
-      <linearGradient id="halfGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#7c3aed" />   {/* Purple */}
-        <stop offset="45%" stopColor="#8b5cf6" />  {/* Light Purple transition */}
-        <stop offset="55%" stopColor="#3b82f6" />  {/* Light Blue transition */}
-        <stop offset="100%" stopColor="#1d4ed8" /> {/* Blue */}
+      {/* Background: Brighter, Vibrant "Stream" Gradient */}
+      <linearGradient id="bgBright" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#4f46e5" /> {/* Indigo 600 */}
+        <stop offset="50%" stopColor="#3b82f6" /> {/* Blue 500 */}
+        <stop offset="100%" stopColor="#06b6d4" /> {/* Cyan 500 */}
       </linearGradient>
 
-      {/* Strong Projected Shadow for 3D effect */}
-      <filter id="strongShadow" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
-        <feOffset dx="0" dy="4" result="offsetblur"/>
-        <feFlood floodColor="#000" floodOpacity="0.5"/>
-        <feComposite in2="offsetblur" operator="in"/>
+      {/* Box Body: Matte Black Texture */}
+      <linearGradient id="boxBody" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#52525b" /> {/* Zinc 600 - Top Light */}
+        <stop offset="100%" stopColor="#18181b" /> {/* Zinc 900 - Shadow */}
+      </linearGradient>
+
+      {/* Glass Frame Reflection */}
+      <linearGradient id="glassFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="rgba(255,255,255,0.6)" />
+        <stop offset="40%" stopColor="rgba(255,255,255,0.1)" />
+        <stop offset="60%" stopColor="rgba(255,255,255,0.1)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.5)" />
+      </linearGradient>
+
+      {/* Soft Shadow for 3D grounding */}
+      <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+        <feOffset dx="0" dy="4" result="offsetblur" />
+        <feComponentTransfer>
+          <feFuncA type="linear" slope="0.4" />
+        </feComponentTransfer>
         <feMerge>
-          <feMergeNode/>
-          <feMergeNode in="SourceGraphic"/>
+          <feMergeNode />
+          <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
 
-      {/* 3D Box Content Gradients */}
-      <linearGradient id="boxBody" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#333" />
-        <stop offset="100%" stopColor="#000" />
-      </linearGradient>
+      {/* Engraved Text Filter */}
+      <filter id="engrave">
+        <feOffset dx="0" dy="0.5" in="SourceAlpha" result="light"/>
+        <feGaussianBlur in="light" stdDeviation="0.2" result="lightBlur"/>
+        <feSpecularLighting in="lightBlur" surfaceScale="1" specularConstant="0.8" specularExponent="15" lightingColor="rgba(255,255,255,0.4)">
+            <fePointLight x="50" y="-50" z="50"/>
+        </feSpecularLighting>
+        <feComposite in2="SourceAlpha" operator="in" result="highlight"/>
+        <feComposite in2="SourceAlpha" operator="in" result="innerShadow"/>
+        <feMerge>
+             <feMergeNode in="innerShadow"/> 
+             <feMergeNode in="SourceGraphic"/> 
+        </feMerge>
+      </filter>
     </defs>
     
-    <g filter="url(#strongShadow)">
-        {/* Main Container shape with Half/Half Gradient */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="url(#halfGrad)" />
+    {/* 1. Main Background Shape */}
+    <rect x="6" y="6" width="88" height="88" rx="20" fill="url(#bgBright)" />
+    
+    {/* 2. Glass Shine Overlay (Gloss) */}
+    <path d="M 6 6 Q 50 60 94 6 L 94 94 Q 50 94 6 94 Z" fill="white" opacity="0.1" />
+    <path d="M 6 6 L 94 6 L 94 45 Q 50 65 6 45 Z" fill="white" opacity="0.15" />
+
+    {/* 3. The Thick Glass Frame (Moldura) */}
+    <rect x="6" y="6" width="88" height="88" rx="20" fill="none" stroke="url(#glassFrame)" strokeWidth="3" />
+    {/* Inner subtle border for depth */}
+    <rect x="8.5" y="8.5" width="83" height="83" rx="18" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
+
+    {/* 4. The 3D Box Device (Centered & Floating) */}
+    <g transform="translate(20, 32)" filter="url(#softShadow)">
+        {/* Main Body (Rounded Rectangle) */}
+        <rect x="0" y="0" width="60" height="36" rx="8" fill="url(#boxBody)" />
         
-        {/* Glass Bevel / Border */}
-        <rect x="5" y="5" width="90" height="90" rx="22" fill="none" stroke="white" strokeWidth="3" strokeOpacity="0.6" />
+        {/* Front Face Gradient (Subtle 3D edge at bottom) */}
+        <path d="M 0 28 L 0 36 L 60 36 L 60 28" fill="black" opacity="0.3" />
         
-        {/* Top Glare for 3D Glass Effect */}
-        <path d="M 10 25 Q 50 5 90 25" fill="none" stroke="white" strokeWidth="2" opacity="0.4" />
+        {/* Top Highlight (The "Edge" catching light) */}
+        <path d="M 2 1 L 58 1" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+
+        {/* Text: STREAM+ (Engraved Look) */}
+        <text x="30" y="21" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="8.5" textAnchor="middle" fill="#1a1a1a" letterSpacing="1.2" filter="url(#engrave)" opacity="0.9">STREAM+</text>
         
-        {/* The 3D Streaming Box Content */}
-        <g transform="translate(25, 30) scale(0.5)">
-            {/* Top Face */}
-            <path d="M0 30 L50 60 L50 90 L0 60 Z" fill="url(#boxBody)" stroke="#444" strokeWidth="1" />
-            {/* Right Face */}
-            <path d="M50 60 L100 30 L100 60 L50 90 Z" fill="black" stroke="#111" strokeWidth="1" />
-            {/* Left Face */}
-            <path d="M0 30 L50 0 L100 30 L50 60 Z" fill="#1a1a1a" stroke="#555" strokeWidth="1" />
-            {/* Blue LED */}
-            <circle cx="85" cy="48" r="6" fill="#3b82f6" filter="blur(2px)" />
-            <circle cx="85" cy="48" r="2" fill="#ffffff" />
-        </g>
+        {/* Power LED (Small, crisp, glowing) */}
+        <circle cx="53" cy="28" r="1.5" fill="#22d3ee">
+             <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" />
+        </circle>
+        {/* LED Glow */}
+        <circle cx="53" cy="28" r="4" fill="#22d3ee" opacity="0.3">
+             <animate attributeName="opacity" values="0.1;0.4;0.1" dur="3s" repeatCount="indefinite" />
+        </circle>
     </g>
   </svg>
 );
@@ -146,7 +181,7 @@ export const IconGallery = ({ className = 'w-6 h-6' }: { className?: string }) =
 
 export const IconClipboard = ({ className = 'w-6 h-6' }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
     </svg>
 );
 
@@ -212,12 +247,54 @@ export const IconWhatsapp = ({ className = 'w-6 h-6' }: { className?: string }) 
 
 export const IconTelegram = ({ className = 'w-6 h-6' }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="currentColor" viewBox="0 0 24 24">
-        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.613-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
     </svg>
 );
 
 export const IconEmail = ({ className = 'w-6 h-6' }: { className?: string }) => (
     <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+    </svg>
+);
+
+export const IconBell = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+  </svg>
+);
+
+export const IconBarcode = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4m4-4h.01M16 8h.01M8 12h.01M16 12h.01M8 16h.01M16 16h.01" />
+    <path d="M4 6h1v12H4zm2 0h2v12H6zm3 0h1v12H9zm3 0h2v12h-2zm3 0h1v12h-1zm3 0h2v12h-2z" fill="currentColor" stroke="none"/>
+  </svg>
+);
+
+export const IconQrCode = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zm-6 12v-2m0 0v-2m0 2h2m-2 0H4m8-14v4m0-4h4m-4 4h4m-4-4v4m0 0h4m-4 4v4m0-4h4m-4 4h4m-4-4v4m0 0h4" />
+    <rect x="5" y="5" width="4" height="4" rx="1" />
+    <rect x="15" y="5" width="4" height="4" rx="1" />
+    <rect x="5" y="15" width="4" height="4" rx="1" />
+  </svg>
+);
+
+export const IconCameraLens = ({ className = 'w-6 h-6' }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+        <circle cx="12" cy="13" r="3" />
+    </svg>
+);
+
+export const IconMapPin = ({ className = 'w-6 h-6' }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+    </svg>
+);
+
+export const IconDownload = ({ className = 'w-6 h-6' }: { className?: string }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
 );
