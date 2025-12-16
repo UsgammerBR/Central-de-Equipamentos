@@ -1,13 +1,12 @@
-
-import React, { useState, useEffect, useReducer, useRef, useMemo, ReactNode } from 'react';
+import React, { useState, useEffect, useReducer, useRef, useMemo, ReactNode, Component } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
-    CustomMenuIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
-    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave, IconStack, IconChevronDown, IconBell, IconQrCode, IconBarcode, IconCameraLens, IconMapPin, IconDownload, IconSettings, IconExport
+    CustomMenuIcon, LoadingBoxIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
+    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave, IconStack, IconChevronDown, IconBell, IconQrCode, IconBarcode, IconCameraLens, IconMapPin, IconDownload, IconSettings, IconExport, IconCalendar, IconInfo
 } from './components/icons';
 import { EquipmentCategory, AppData, DailyData, EquipmentItem, AppNotification, UserProfile } from './types';
 import { CATEGORIES } from './constants';
-import { Html5QrcodeScanner, Html5QrcodeScanType } from "html5-qrcode";
+import { Html5QrcodeScanner, Html5QrcodeScanType, Html5Qrcode } from "html5-qrcode";
 
 // --- UTILITIES ---
 
@@ -112,7 +111,7 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
     super(props);
     this.state = { hasError: false, error: null };
   }
-  
+
   static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
   
   render() {
@@ -123,9 +122,18 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+// --- LOADING SCREEN ---
+const LoadingScreen = () => (
+    <div className="fixed inset-0 z-[100] bg-slate-100 flex items-center justify-center flex-col animate-fade-in">
+        <LoadingBoxIcon className="w-64 h-64 drop-shadow-2xl" />
+        <p className="mt-4 text-cyan-600 font-bold animate-pulse tracking-widest text-xs">INICIANDO SISTEMA...</p>
+    </div>
+);
+
 // --- MAIN APP ---
 
 const AppContent = () => {
+  const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appData, dispatch] = useReducer(dataReducer, {});
@@ -134,11 +142,12 @@ const AppContent = () => {
   const [galleryItem, setGalleryItem] = useState<EquipmentItem | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   
-  // State to track which categories are showing ALL history vs ONLY LAST item
   const [historyVisibleCategories, setHistoryVisibleCategories] = useState<EquipmentCategory[]>([]);
 
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
+  const [duplicateAlert, setDuplicateAlert] = useState<{ foundValue: string; type: string; onConfirm: () => void; onCancel: () => void; } | null>(null);
+  
   const [cameraModalItem, setCameraModalItem] = useState<EquipmentItem | null>(null);
   const [isGlobalDeleteMode, setIsGlobalDeleteMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
@@ -151,7 +160,12 @@ const AppContent = () => {
   
   const formattedDate = getFormattedDate(currentDate);
 
-  // Check for shared data in URL Hash on mount
+  // Simulated Loading
+  useEffect(() => {
+      const timer = setTimeout(() => setIsLoading(false), 2500);
+      return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const checkHash = () => {
         const hash = window.location.hash;
@@ -236,6 +250,31 @@ const AppContent = () => {
 
   const currentDayData: DailyData = appData[formattedDate] || createEmptyDailyData();
 
+  // Duplicate Logic
+  const checkDuplicate = (type: 'contract' | 'serial', value: string, currentId: string) => {
+      if (!value || value.length < 3) return false;
+      
+      let isDuplicate = false;
+      // Iterate through all dates in appData
+      for (const dateKey in appData) {
+          const day = appData[dateKey];
+          for (const catKey in day) {
+              const items = day[catKey as EquipmentCategory];
+              for (const item of items) {
+                  if (item.id !== currentId) { // ignore self
+                      if ((type === 'contract' && item.contract === value) || (type === 'serial' && item.serial === value)) {
+                          isDuplicate = true;
+                          break;
+                      }
+                  }
+              }
+              if(isDuplicate) break;
+          }
+          if(isDuplicate) break;
+      }
+      return isDuplicate;
+  };
+
   const handleGlobalAdd = () => {
       if (isReadOnly) { setShowAccessDenied(true); return; }
       
@@ -243,7 +282,6 @@ const AppContent = () => {
       CATEGORIES.forEach(cat => {
           const items = currentDayData[cat] || [];
           const lastItem = items[items.length - 1];
-          // If the last item has content (Contract, Serial or Photo), add a new line for this category
           if (lastItem && (lastItem.contract || lastItem.serial || lastItem.photos.length > 0)) {
               dispatchWithHistory({ type: 'ADD_ITEM', payload: { date: formattedDate, category: cat } });
               addedAny = true;
@@ -260,8 +298,31 @@ const AppContent = () => {
       dispatchWithHistory({ type: 'DELETE_SINGLE_ITEM', payload: { date: formattedDate, category, itemId } });
   };
 
-  const handleUpdateItem = (category: EquipmentCategory, item: EquipmentItem) => {
+  const handleUpdateItem = (category: EquipmentCategory, item: EquipmentItem, checkField?: 'contract' | 'serial') => {
       if (isReadOnly) { setShowAccessDenied(true); return; }
+      
+      if (checkField) {
+          const value = checkField === 'contract' ? item.contract : item.serial;
+          if (checkDuplicate(checkField, value, item.id)) {
+             setDuplicateAlert({
+                 foundValue: value,
+                 type: checkField === 'contract' ? 'Contrato' : 'Serial',
+                 onConfirm: () => {
+                     // User clicked Sim (Green) - Keep the value
+                     dispatchWithHistory({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item } });
+                     setDuplicateAlert(null);
+                 },
+                 onCancel: () => {
+                     // User clicked Nao (Red) - Clear the field
+                     const clearedItem = { ...item, [checkField]: '' };
+                     dispatchWithHistory({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item: clearedItem } });
+                     setDuplicateAlert(null);
+                 }
+             });
+             return; 
+          }
+      }
+
       dispatchWithHistory({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item } });
   };
 
@@ -305,23 +366,35 @@ const AppContent = () => {
       );
   };
 
+  const handleInstallApp = () => {
+      if (installPrompt) {
+          installPrompt.prompt();
+          installPrompt.userChoice.then((choice: any) => {
+             // Handle choice
+          });
+      }
+  };
+
+  if (isLoading) return <LoadingScreen />;
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-slate-100 text-slate-700 font-sans pb-32">
-      <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }}/>
+    // FIX: CHANGED BACKGROUND TO LIGHTER/COLORFUL GRADIENT
+    <div className="min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e0f2fe] to-[#cbd5e1] text-slate-800 font-sans pb-32">
+       {/* MENU OVERLAY */}
+       {isMenuOpen && <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(modal) => { setActiveModal(modal); setIsMenuOpen(false); }} />}
       
       {/* GLOBAL HEADER */}
-      <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-xl py-2 px-4 shadow-sm border-b border-white/10 flex flex-col gap-2">
-        {/* Top Row: Menu & Actions (Sides) */}
+      <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-xl py-2 px-4 shadow-sm border-b border-white/30 flex flex-col gap-2">
         <div className="flex items-center justify-between w-full">
-            {/* Left: Menu */}
             <div className="flex-shrink-0 z-20">
-                <button onClick={() => setIsMenuOpen(true)} className="active:scale-95 transition-transform drop-shadow-lg">
-                    <CustomMenuIcon className="w-12 h-12" />
-                </button>
+                {/* 3D Button Style - Large Size */}
+                <div className="active:scale-95 transition-transform cursor-pointer drop-shadow-[0_12px_24px_rgba(0,0,0,0.25)]" onClick={() => setIsMenuOpen(true)}>
+                     <CustomMenuIcon className="w-16 h-16" />
+                </div>
             </div>
 
-            {/* Right: Actions */}
             <div className="flex items-center gap-2 z-20">
+                {/* SMALLER BUTTONS w-8 h-8 - NOW WHITE WITH COLORED ICONS */}
                 <ActionButton onClick={handleGlobalAdd} disabled={isReadOnly}><IconPlus className="w-4 h-4" /></ActionButton>
                 <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode} disabled={isReadOnly}><IconMinus className="w-4 h-4" /></ActionButton>
                 {isGlobalDeleteMode && Object.values(selectedItems).reduce<number>((acc, items: string[]) => acc + items.length, 0) > 0 && (
@@ -336,20 +409,19 @@ const AppContent = () => {
             </div>
         </div>
 
-        {/* Bottom Row: Name & Date (Perfectly Centered) */}
         <div className="flex flex-col items-center justify-center w-full animate-fade-in -mt-1 pb-1">
             {userProfile.name && (
-                <div className="w-full text-center px-4 mb-0.5">
-                    <h1 className="text-sm font-sans font-extrabold text-blue-900 tracking-tighter uppercase truncate max-w-[80%] mx-auto">
+                <div className="w-full text-center px-4 mb-2 mt-2">
+                    <h1 className="text-2xl font-sans font-black text-slate-800 tracking-tighter uppercase truncate max-w-[90%] mx-auto drop-shadow-sm">
                         {userProfile.name}
                     </h1>
                 </div>
             )}
-            <button onClick={() => setActiveModal('calendar')} className="inline-flex items-center justify-center gap-1.5 px-4 py-1 rounded-full bg-white/60 border border-white/40 backdrop-blur-md shadow-sm active:scale-95 transition-transform hover:bg-white/80 mx-auto">
-                <span className="text-xs font-bold text-slate-600 tracking-tight">
+            <button onClick={() => setActiveModal('calendar')} className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-white/70 border border-white/50 backdrop-blur-md shadow-sm active:scale-95 transition-transform hover:bg-white/90 mx-auto mb-1">
+                <span className="text-base font-extrabold text-cyan-800 tracking-tight">
                     {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                 </span>
-                <IconChevronDown className="w-3 h-3 text-slate-400"/>
+                <IconChevronDown className="w-4 h-4 text-cyan-600"/>
             </button>
         </div>
       </header>
@@ -360,7 +432,7 @@ const AppContent = () => {
                 key={`${formattedDate}-${category}`} 
                 category={category} 
                 allCategoryItems={currentDayData[category] || []}
-                onUpdateItem={(item: EquipmentItem) => handleUpdateItem(category, item)}
+                onUpdateItem={(item: EquipmentItem, checkField?: 'contract' | 'serial') => handleUpdateItem(category, item, checkField)}
                 onViewGallery={(item: EquipmentItem) => setGalleryItem(item)}
                 isDeleteMode={isGlobalDeleteMode}
                 selectedItems={selectedItems[category] || []}
@@ -390,15 +462,46 @@ const AppContent = () => {
       
       {cameraModalItem && <CameraModal 
             onClose={() => setCameraModalItem(null)} 
-            onCapture={(code: string | null) => {
+            onCapture={(code: string | null, photo?: string) => {
+                let duplicateFound = false;
                 if (code) {
                     const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
                     if (cat) {
-                        const updated = { ...cameraModalItem, serial: code };
-                        handleUpdateItem(cat, updated);
-                        addNotification('success', 'Código escaneado com sucesso.');
+                        // Check Duplicate before scanning
+                        if (checkDuplicate('serial', code, cameraModalItem.id)) {
+                             duplicateFound = true;
+                             setDuplicateAlert({
+                                 foundValue: code,
+                                 type: 'Serial',
+                                 onConfirm: () => {
+                                     const updated = { ...cameraModalItem, serial: code };
+                                     handleUpdateItem(cat, updated);
+                                     addNotification('success', 'Código capturado (Duplicado Aceito).');
+                                     setDuplicateAlert(null);
+                                 },
+                                 onCancel: () => {
+                                     setDuplicateAlert(null);
+                                 }
+                             });
+                        } else {
+                            const updated = { ...cameraModalItem, serial: code };
+                            handleUpdateItem(cat, updated);
+                            addNotification('success', 'Código capturado com sucesso.');
+                        }
                     }
                 }
+                
+                if (!duplicateFound) {
+                     // Only process photo if no duplicate modal is blocking, or if photo logic is separate
+                     if (photo) {
+                        const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
+                        if(cat) {
+                            const updated = { ...cameraModalItem, photos: [...cameraModalItem.photos, photo] };
+                            handleUpdateItem(cat, updated);
+                        }
+                    }
+                }
+                
                 setCameraModalItem(null);
             }} 
             addNotification={addNotification}
@@ -430,6 +533,26 @@ const AppContent = () => {
       
       {confirmation && <ConfirmationModal message={confirmation.message} onConfirm={() => { confirmation.onConfirm(); setConfirmation(null); }} onCancel={() => setConfirmation(null)} />}
       
+      {duplicateAlert && (
+          <ModalOverlay onClose={duplicateAlert.onCancel}>
+               <div className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-red-100 mx-auto flex items-center justify-center mb-4">
+                        <IconBell className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">Atenção: Duplicidade</h3>
+                    <p className="text-slate-600 mb-4 font-medium">
+                        Este {duplicateAlert.type} <strong>{duplicateAlert.foundValue}</strong> já foi usado anteriormente.
+                    </p>
+                    <p className="text-sm text-slate-500 mb-6">Deseja usar novamente?</p>
+                    
+                    <div className="flex gap-3">
+                        <button onClick={duplicateAlert.onCancel} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold shadow-lg active:scale-95 transition-all">Não</button>
+                        <button onClick={duplicateAlert.onConfirm} className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold shadow-lg active:scale-95 transition-all">Sim</button>
+                    </div>
+               </div>
+          </ModalOverlay>
+      )}
+
       {showAccessDenied && (
           <AccessDeniedModal onClose={() => setShowAccessDenied(false)} onRequest={handleRequestAlteration} />
       )}
@@ -449,15 +572,16 @@ export default App;
 
 // --- COMPONENTS ---
 
+// FIX: BUTTON STYLE CHANGED TO WHITE BG AND COLORED ICONS
 const ActionButton = ({ children, onClick, isPrimary, isDanger, disabled }: any) => (
     <button 
         onClick={onClick} 
         disabled={disabled}
-        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-md border border-white/20 ${
-            disabled ? 'opacity-50 cursor-not-allowed bg-slate-200' :
-            isPrimary ? 'bg-cyan-600 text-white hover:bg-cyan-500' : 
-            isDanger ? 'bg-red-500/20 text-red-500' :
-            'bg-white/10 text-slate-600 hover:bg-white/20 backdrop-blur-sm'
+        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm border ${
+            disabled ? 'opacity-50 cursor-not-allowed bg-slate-200 border-transparent' :
+            isPrimary ? 'bg-cyan-600 text-white border-transparent hover:bg-cyan-500' : 
+            isDanger ? 'bg-red-50 text-red-500 border-red-100' :
+            'bg-white text-cyan-700 border-cyan-100 hover:bg-cyan-50'
         }`}
     >
         {children}
@@ -465,27 +589,19 @@ const ActionButton = ({ children, onClick, isPrimary, isDanger, disabled }: any)
 );
 
 const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isHistoryVisible, onToggleHistory, onOpenCamera, isReadOnly, onTriggerReadOnly }: any) => {
-    
-    // Logic: If history is visible, show ALL items. If not, show only the LAST item (which acts as the input).
     const itemsToDisplay = isHistoryVisible ? allCategoryItems : allCategoryItems.slice(-1);
-
-    const copyToClipboard = (text: string) => {
-        if(!text) return;
-        navigator.clipboard.writeText(text);
-    };
+    const copyToClipboard = (text: string) => { if(text) navigator.clipboard.writeText(text); };
 
     return (
         <div className="relative">
-             {/* Header */}
              <div 
-                className={`w-full p-4 rounded-xl flex items-center justify-between transition-all duration-300 shadow-md relative overflow-hidden border border-white/30 
+                className={`w-full p-4 rounded-xl flex items-center justify-between transition-all duration-300 shadow-md relative overflow-hidden border border-white/50 
                     ${isHistoryVisible 
                         ? 'bg-gradient-to-br from-indigo-500/90 via-blue-500/90 to-cyan-500/90 text-white scale-[1.02] backdrop-blur-md' 
-                        : 'bg-white/60 text-slate-600 hover:bg-white/80 backdrop-blur-sm'
+                        : 'bg-white/80 text-slate-700 hover:bg-white backdrop-blur-sm'
                     }`}
             >
-                {/* Click on Title Toggles History Visibility */}
-                <button onClick={onToggleHistory} className="flex items-center gap-3 relative z-10 flex-1 text-left focus:outline-none w-full">
+                <button onClick={onToggleHistory} className="flex items-center gap-3 relative z-10 flex-1 text-left focus:outline-none w-full active:scale-95 transition-transform">
                     <span className="font-extrabold text-lg tracking-wide uppercase">{category}</span>
                     <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isHistoryVisible ? 'bg-white/20' : 'bg-slate-200/50'}`}>
                         {allCategoryItems.filter(isItemActive).length}
@@ -496,10 +612,10 @@ const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGall
                 </button>
             </div>
 
-            {/* Items List */}
             <div className="mt-3 grid gap-3 animate-slide-in-up">
                 {itemsToDisplay.map((item: EquipmentItem) => (
-                    <div key={item.id} className={`relative p-2 bg-white/40 rounded-xl border border-white/40 shadow-sm backdrop-blur-sm flex items-center gap-1 ${isDeleteMode ? 'pl-10' : ''}`}>
+                    // TRANSPARENT ITEM BACKGROUND WITH SHADOW
+                    <div key={item.id} className={`relative p-2 bg-white/40 backdrop-blur-sm rounded-2xl shadow-lg flex items-center border border-white/30 ${isDeleteMode ? 'pl-10' : ''}`}>
                         {isDeleteMode && (
                             <div className="absolute left-3 z-10">
                                 <input 
@@ -512,10 +628,7 @@ const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGall
                             </div>
                         )}
                         
-                        {/* SINGLE LINE LAYOUT: Contract | Serial | Camera | Gallery */}
-                        <div className="flex items-center gap-1 w-full overflow-hidden">
-                            
-                            {/* Contract Input */}
+                        <div className="flex items-center gap-2 w-full overflow-hidden">
                             <div className="relative w-24 shrink-0">
                                 <input 
                                     type="number" 
@@ -524,16 +637,16 @@ const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGall
                                     readOnly={isReadOnly}
                                     onClick={isReadOnly ? onTriggerReadOnly : undefined}
                                     onChange={(e) => onUpdateItem({ ...item, contract: e.target.value })}
-                                    className="w-full bg-white/50 border border-white/30 rounded-lg py-2 pl-1 pr-6 text-center font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:bg-white/80 transition-all shadow-inner text-[10px]"
+                                    onBlur={() => onUpdateItem(item, 'contract')} 
+                                    className="w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all shadow-inner text-xs border-none"
                                 />
                                 {item.contract && item.contract.toString().length > 0 && (
-                                    <button onClick={() => copyToClipboard(item.contract)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20">
+                                    <button onClick={() => copyToClipboard(item.contract)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20 active:scale-90">
                                         <IconClipboard className="w-3.5 h-3.5"/>
                                     </button>
                                 )}
                             </div>
 
-                            {/* Serial Input */}
                             <div className="relative flex-1 min-w-0">
                                     <input 
                                     type="text" 
@@ -542,28 +655,33 @@ const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGall
                                     readOnly={isReadOnly}
                                     onClick={isReadOnly ? onTriggerReadOnly : undefined}
                                     onChange={(e) => onUpdateItem({ ...item, serial: e.target.value })}
-                                    className="w-full bg-white/50 border border-white/30 rounded-lg py-2 pl-1 pr-6 text-center font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:bg-white/80 transition-all shadow-inner text-[10px]"
+                                    onBlur={() => onUpdateItem(item, 'serial')}
+                                    className="w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all shadow-inner text-xs border-none"
                                 />
                                     {item.serial && item.serial.length > 0 && (
-                                    <button onClick={() => copyToClipboard(item.serial)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20">
+                                    <button onClick={() => copyToClipboard(item.serial)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20 active:scale-90">
                                         <IconClipboard className="w-3.5 h-3.5"/>
                                     </button>
                                     )}
                             </div>
 
-                            {/* Action Buttons: Camera | Gallery */}
-                            <div className="flex gap-1 shrink-0">
-                                    <button 
+                            <div className="flex gap-2 shrink-0">
+                                <button 
                                     onClick={() => onOpenCamera(item)}
-                                    className="bg-slate-800 text-white p-1.5 rounded-lg shadow-md hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center w-8 h-8"
+                                    // CAMERA BUTTON COLOR: Slate-800 (matching text)
+                                    className="bg-slate-800 text-white p-2 rounded-lg shadow-md hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center w-10 h-10 border-none"
                                 >
-                                    <IconCamera className="w-4 h-4" />
+                                    <IconCamera className="w-5 h-5" />
                                 </button>
-                                    <button 
+                                <button 
                                     onClick={() => onViewGallery(item)}
-                                    className={`p-1.5 rounded-lg shadow-md transition-all flex items-center justify-center w-8 h-8 ${item.photos.length > 0 ? 'bg-blue-100 text-blue-600' : 'bg-white text-slate-400'}`}
+                                    className={`p-2 rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center w-10 h-10 border-none ${
+                                        item.photos.length > 0 
+                                        ? 'bg-slate-600 text-white hover:bg-slate-500' 
+                                        : 'bg-white text-slate-400 hover:bg-slate-50'
+                                    }`}
                                 >
-                                    <IconGallery className="w-4 h-4" />
+                                    <IconGallery className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
@@ -575,17 +693,16 @@ const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGall
 };
 
 const SummaryFooter = ({ data, allData, currentDate }: any) => {
-    // 1. Calculate active count for each category today
+    // Calculate category counts ensuring all CATEGORIES (including CHIP) are present
     const categoryCounts: Record<string, number> = {};
     CATEGORIES.forEach(cat => {
         categoryCounts[cat] = (data[cat] || []).filter(isItemActive).length;
     });
 
-    // 2. Total Today
     const totalToday = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
-
-    // 3. Monthly Total
     const [year, month] = currentDate.split('-');
+    
+    // Monthly total calculation logic
     const monthlyTotal = Object.entries(allData).reduce((sum: number, [date, dayData]: [string, any]) => {
         if (date.startsWith(`${year}-${month}`)) {
             return sum + Object.values(dayData as DailyData).flat().filter(isItemActive).length;
@@ -593,7 +710,6 @@ const SummaryFooter = ({ data, allData, currentDate }: any) => {
         return sum;
     }, 0);
 
-    // List of items to display in horizontal scroll
     const items = [
         ...CATEGORIES.map(cat => ({ label: cat, value: categoryCounts[cat], color: 'text-slate-700' })),
         { label: 'Total Dia', value: totalToday, color: 'text-blue-600' },
@@ -601,11 +717,11 @@ const SummaryFooter = ({ data, allData, currentDate }: any) => {
     ];
 
     return (
-        <footer className="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-xl border-t border-white/40 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 overflow-x-auto hide-scrollbar">
-            <div className="flex items-center min-w-max px-4 py-3 gap-6">
+        <footer className="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-xl border-t border-white/40 shadow-[0_-5px_20px_rgba(0,0,0,0.1)] z-20 pb-safe">
+            <div className="flex items-center px-4 py-3 gap-6 overflow-x-auto hide-scrollbar">
                 {items.map((item, idx) => (
-                    <div key={idx} className="flex flex-col items-center min-w-[60px]">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 whitespace-nowrap">{item.label}</span>
+                    <div key={idx} className="flex flex-col items-center min-w-[60px] flex-shrink-0 active:scale-95 transition-transform cursor-pointer">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-0.5 whitespace-nowrap">{item.label}</span>
                         <span className={`text-xl font-black ${item.color}`}>{item.value}</span>
                     </div>
                 ))}
@@ -634,12 +750,7 @@ const AccessDeniedModal = ({ onClose, onRequest }: { onClose: () => void, onRequ
             </div>
             <h2 className="text-xl font-bold text-red-600 mb-2">Acesso Negado</h2>
             <p className="text-slate-600 mb-6 font-medium">Para alterar dados, solicite permissão ao dono do app.</p>
-            <button 
-                onClick={onRequest}
-                className="w-full py-3 rounded-xl bg-red-600 text-white font-bold shadow-lg hover:bg-red-700 active:scale-95 transition-all"
-            >
-                Solicitar Alteração
-            </button>
+            <button onClick={onRequest} className="w-full py-3 rounded-xl bg-red-600 text-white font-bold shadow-lg hover:bg-red-700 active:scale-95 transition-all">Solicitar Alteração</button>
         </div>
     </div>
 );
@@ -648,67 +759,31 @@ const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, insta
     const [name, setName] = useState(userProfile.name);
     const [cpf, setCpf] = useState(userProfile.cpf || '');
 
-    const handleSave = () => {
-        onSaveProfile({ name, cpf });
-        onClose();
-    };
-
-    const handleInstall = () => {
-        if (installPrompt) {
-            installPrompt.prompt();
-            installPrompt.userChoice.then((choice: any) => {
-                if(choice.outcome === 'accepted') {
-                   // Installed
-                }
-            });
-        }
-    };
+    const handleSave = () => { onSaveProfile({ name, cpf }); onClose(); };
 
     return (
         <ModalOverlay onClose={onClose}>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2"><IconSettings className="w-6 h-6"/> Configurações</h2>
-                <button onClick={onClose}><IconX className="w-6 h-6 text-slate-400" /></button>
+                <button onClick={onClose}><IconX className="w-6 h-6 text-slate-400 active:scale-95" /></button>
             </div>
-
             <div className="space-y-4">
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Nome do Usuário</label>
-                    <input 
-                        type="text" 
-                        value={name} 
-                        onChange={(e) => setName(e.target.value)} 
-                        placeholder="Seu Nome"
-                        className="w-full bg-slate-100 rounded-xl p-3 text-left border-none focus:ring-2 focus:ring-cyan-500"
-                    />
+                    <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Seu Nome" className="w-full bg-slate-100 rounded-xl p-3 text-left border-none focus:ring-2 focus:ring-cyan-500"/>
                 </div>
-
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CPF (Opcional)</label>
-                    <input 
-                        type="text" 
-                        value={cpf} 
-                        onChange={(e) => setCpf(e.target.value)} 
-                        placeholder="000.000.000-00"
-                        className="w-full bg-slate-100 rounded-xl p-3 text-left border-none focus:ring-2 focus:ring-cyan-500"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-1">Visível apenas para você e na tela Sobre.</p>
+                    <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" className="w-full bg-slate-100 rounded-xl p-3 text-left border-none focus:ring-2 focus:ring-cyan-500"/>
                 </div>
-
                 <div className="pt-4 space-y-3">
-                    <button onClick={handleSave} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg active:scale-95 transition-transform">
-                        Confirmar
-                    </button>
-
+                    <button onClick={handleSave} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg active:scale-95 transition-transform">Confirmar</button>
                     {installPrompt && (
-                        <button onClick={handleInstall} className="w-full py-3 rounded-xl bg-cyan-600 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                        <button onClick={() => installPrompt.prompt()} className="w-full py-3 rounded-xl bg-cyan-600 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
                             <IconDownload className="w-5 h-5" /> Instalar App
                         </button>
                     )}
-
-                    <button onClick={onClearData} className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-bold border border-red-100 active:scale-95 transition-transform">
-                        Limpar Todos os Dados
-                    </button>
+                    <button onClick={onClearData} className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-bold border border-red-100 active:scale-95 transition-transform">Limpar Todos os Dados</button>
                 </div>
             </div>
         </ModalOverlay>
@@ -718,14 +793,13 @@ const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, insta
 const AboutModal = ({ userProfile, onClose, onShareClick, onShareDataClick }: any) => (
   <ModalOverlay onClose={onClose}>
     <div className="text-center space-y-6">
-        <CustomMenuIcon className="w-24 h-24 mx-auto drop-shadow-2xl" />
+        <CustomMenuIcon className="w-32 h-32 mx-auto drop-shadow-2xl" />
         <div>
             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Controle</h2>
             <p className="text-slate-500 font-medium">de Equipamentos</p>
-            <p className="text-xs text-slate-400 mt-1">v0.0.1c</p>
+            <p className="text-xs text-slate-400 mt-1">v1.0.0</p>
              <p className="text-lg font-sans font-bold text-slate-800 mt-2">Dono: Leo Luz</p>
         </div>
-
         {(userProfile.name || userProfile.cpf) && (
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
                 <p className="text-xs font-bold text-slate-400 uppercase mb-2">Proprietário</p>
@@ -733,7 +807,6 @@ const AboutModal = ({ userProfile, onClose, onShareClick, onShareDataClick }: an
                 {userProfile.cpf && <p className="text-sm text-slate-500 font-mono mt-1">{userProfile.cpf}</p>}
             </div>
         )}
-
         <div className="grid gap-3">
              <button onClick={onShareClick} className="w-full py-3 rounded-xl bg-cyan-50 text-cyan-600 font-bold border border-cyan-100 active:scale-95 flex items-center justify-center gap-2">
                 <IconShare className="w-5 h-5" /> Compartilhar App
@@ -747,56 +820,9 @@ const AboutModal = ({ userProfile, onClose, onShareClick, onShareDataClick }: an
 );
 
 const ShareModal = ({ appData, currentDate, isSharingApp, isSharingData, isExportMode, onClose }: any) => {
-    
-    // EXPORT LOGIC
-    const handleExport = (scope: 'day' | 'month') => {
-        let itemsToExport: any[] = [];
-        const currentYear = currentDate.getFullYear();
-        const currentMonth = currentDate.getMonth();
-        const dateStr = getFormattedDate(currentDate);
-
-        Object.entries(appData).forEach(([dKey, dayData]: [string, any]) => {
-             const dObj = new Date(dKey);
-             const isSameMonth = dObj.getFullYear() === currentYear && dObj.getMonth() === currentMonth;
-             const isSameDay = dKey === dateStr;
-
-             if ((scope === 'day' && isSameDay) || (scope === 'month' && isSameMonth)) {
-                 CATEGORIES.forEach(cat => {
-                     (dayData[cat] || []).forEach((item: EquipmentItem) => {
-                         if (isItemActive(item)) {
-                             itemsToExport.push({ ...item, date: dKey, category: cat });
-                         }
-                     });
-                 });
-             }
-        });
-
-        // Generate CSV content
-        let csvContent = "data:text/csv;charset=utf-8,";
-        csvContent += "Data,Hora,Categoria,Contrato,Serial\n";
-        
-        itemsToExport.forEach(i => {
-            const time = i.createdAt ? new Date(i.createdAt).toLocaleTimeString() : '00:00:00';
-            csvContent += `${i.date},${time},${i.category},${i.contract},${i.serial}\n`;
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        const filename = `relatorio_${scope}_${dateStr}.csv`;
-        link.setAttribute("download", filename);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        onClose();
-    };
-
-
-    const handleShare = () => {
+    // Generate the share link if sharing data
+    const shareUrl = useMemo(() => {
         let url = window.location.origin + window.location.pathname;
-        let title = "Controle de Equipamentos";
-        let text = "Confira este app para gerenciar seus equipamentos.";
-
         if (isSharingData) {
             const safeData = JSON.parse(JSON.stringify(appData));
             Object.keys(safeData).forEach(date => {
@@ -806,19 +832,60 @@ const ShareModal = ({ appData, currentDate, isSharingApp, isSharingData, isExpor
             });
             const b64 = btoa(JSON.stringify(safeData));
             url += `#data=${b64}`;
-            text = "Estou compartilhando meus dados de equipamentos com você.";
-        } 
-
-        if (navigator.share) {
-            navigator.share({ title, text, url }).catch(console.error);
-        } else {
-            navigator.clipboard.writeText(url);
-            alert("Link copiado!");
         }
+        return url;
+    }, [appData, isSharingData]);
+
+    const title = "Controle de Equipamentos";
+    const text = isSharingData ? "Estou compartilhando meus dados de equipamentos com você." : "Confira este app para gerenciar equipamentos.";
+
+    // Simple Copy Link Function
+    const handleCopyLink = () => {
+        navigator.clipboard.writeText(shareUrl);
+        alert("Link copiado!");
         onClose();
     };
 
     if (isExportMode) {
+         const handleExport = (scope: 'day' | 'month') => {
+            let itemsToExport: any[] = [];
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth();
+            const dateStr = getFormattedDate(currentDate);
+
+            Object.entries(appData).forEach(([dKey, dayData]: [string, any]) => {
+                const dObj = new Date(dKey);
+                const isSameMonth = dObj.getFullYear() === currentYear && dObj.getMonth() === currentMonth;
+                const isSameDay = dKey === dateStr;
+
+                if ((scope === 'day' && isSameDay) || (scope === 'month' && isSameMonth)) {
+                    CATEGORIES.forEach(cat => {
+                        (dayData[cat] || []).forEach((item: EquipmentItem) => {
+                            if (isItemActive(item)) {
+                                itemsToExport.push({ ...item, date: dKey, category: cat });
+                            }
+                        });
+                    });
+                }
+            });
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Data,Hora,Categoria,Contrato,Serial\n";
+            itemsToExport.forEach(i => {
+                const time = i.createdAt ? new Date(i.createdAt).toLocaleTimeString() : '00:00:00';
+                csvContent += `${i.date},${time},${i.category},${i.contract},${i.serial}\n`;
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            const filename = `relatorio_${scope}_${dateStr}.csv`;
+            link.setAttribute("download", filename);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            onClose();
+        };
+
         return (
             <ModalOverlay onClose={onClose}>
                  <div className="text-center">
@@ -826,20 +893,9 @@ const ShareModal = ({ appData, currentDate, isSharingApp, isSharingData, isExpor
                         <IconExport className="w-8 h-8 text-green-600" />
                     </div>
                     <h3 className="text-xl font-bold text-slate-800 mb-4">Exportar Relatório</h3>
-                    
-                    <div className="flex gap-4 mb-6 justify-center">
-                         <a href="https://web.whatsapp.com" target="_blank" className="p-3 bg-green-100 rounded-full text-green-600 hover:scale-110 transition"><IconWhatsapp className="w-6 h-6"/></a>
-                         <a href="https://web.telegram.org" target="_blank" className="p-3 bg-blue-100 rounded-full text-blue-500 hover:scale-110 transition"><IconTelegram className="w-6 h-6"/></a>
-                         <a href="mailto:?subject=Relatorio" className="p-3 bg-slate-100 rounded-full text-slate-600 hover:scale-110 transition"><IconEmail className="w-6 h-6"/></a>
-                    </div>
-
                     <div className="space-y-3">
-                        <button onClick={() => handleExport('day')} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg flex items-center justify-center gap-2">
-                             <IconFileExcel className="w-5 h-5"/> Exportar Dia (Excel)
-                        </button>
-                        <button onClick={() => handleExport('month')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold shadow-lg flex items-center justify-center gap-2">
-                             <IconFileExcel className="w-5 h-5"/> Exportar Mês (Excel)
-                        </button>
+                        <button onClick={() => handleExport('day')} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95"><IconFileExcel className="w-5 h-5"/> Exportar Dia (Excel)</button>
+                        <button onClick={() => handleExport('month')} className="w-full py-3 rounded-xl bg-purple-600 text-white font-bold shadow-lg flex items-center justify-center gap-2 active:scale-95"><IconFileExcel className="w-5 h-5"/> Exportar Mês (Excel)</button>
                     </div>
                 </div>
             </ModalOverlay>
@@ -857,11 +913,19 @@ const ShareModal = ({ appData, currentDate, isSharingApp, isSharingData, isExpor
                 </h3>
                 <p className="text-slate-500 mb-6 text-sm">
                     {isSharingData 
-                        ? 'Gera um link contendo todos os registros (sem fotos) para visualização.' 
-                        : 'Envia o link do aplicativo limpo para outra pessoa instalar.'}
+                        ? 'Envie os registros atuais para alguém.' 
+                        : 'Envie o link para instalação.'}
                 </p>
-                <button onClick={handleShare} className="w-full py-3 rounded-xl bg-cyan-600 text-white font-bold shadow-lg hover:bg-cyan-500 transition-colors">
-                    Gerar Link e Compartilhar
+                
+                {/* Social Share Buttons for BOTH App and Data Sharing */}
+                <div className="flex gap-4 mb-6 justify-center">
+                    <a href={`https://wa.me/?text=${encodeURIComponent(text + ' ' + shareUrl)}`} target="_blank" rel="noreferrer" className="p-4 bg-green-100 rounded-full text-green-600 hover:scale-110 transition shadow-sm active:scale-95"><IconWhatsapp className="w-6 h-6"/></a>
+                    <a href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(text)}`} target="_blank" rel="noreferrer" className="p-4 bg-blue-100 rounded-full text-blue-500 hover:scale-110 transition shadow-sm active:scale-95"><IconTelegram className="w-6 h-6"/></a>
+                    <a href={`mailto:?subject=${encodeURIComponent(title)}&body=${encodeURIComponent(text + '\n\n' + shareUrl)}`} className="p-4 bg-slate-100 rounded-full text-slate-600 hover:scale-110 transition shadow-sm active:scale-95"><IconEmail className="w-6 h-6"/></a>
+                </div>
+
+                <button onClick={handleCopyLink} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg hover:bg-slate-700 transition-colors active:scale-95">
+                    Copiar Link
                 </button>
             </div>
         </ModalOverlay>
@@ -874,25 +938,19 @@ const NotificationsModal = ({ notifications, onClose }: any) => (
     <ModalOverlay onClose={onClose}>
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold flex items-center gap-2"><IconBell className="w-5 h-5"/> Notificações</h2>
-            <button onClick={onClose}><IconX className="w-5 h-5 text-slate-400"/></button>
+            <button onClick={onClose}><IconX className="w-5 h-5 text-slate-400 active:scale-95"/></button>
         </div>
         <div className="max-h-80 overflow-y-auto space-y-3 -mx-2 px-2">
             {notifications.length === 0 ? <p className="text-center text-slate-400 py-4">Nenhuma notificação.</p> : 
             notifications.map((n: AppNotification) => (
                 <div key={n.id} className={`p-3 rounded-xl border ${n.type === 'request' ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-100 shadow-sm'}`}>
                     <div className="flex justify-between items-start mb-1">
-                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${
-                            n.type === 'error' ? 'bg-red-100 text-red-600' : 
-                            n.type === 'success' ? 'bg-green-100 text-green-600' : 
-                            n.type === 'request' ? 'bg-blue-200 text-blue-700' : 'bg-slate-100 text-slate-500'
-                        }`}>{n.type}</span>
+                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${n.type === 'error' ? 'bg-red-100 text-red-600' : n.type === 'success' ? 'bg-green-100 text-green-600' : n.type === 'request' ? 'bg-blue-200 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>{n.type}</span>
                         <span className="text-[10px] text-slate-400">{new Date(n.timestamp).toLocaleTimeString()}</span>
                     </div>
                     <p className="text-sm font-medium text-slate-700">{n.message}</p>
                     {n.actionLabel && n.onAction && (
-                        <button onClick={() => { n.onAction!(); onClose(); }} className="mt-2 text-xs font-bold text-blue-600 hover:underline">
-                            {n.actionLabel}
-                        </button>
+                        <button onClick={() => { n.onAction!(); onClose(); }} className="mt-2 text-xs font-bold text-blue-600 hover:underline active:scale-95">{n.actionLabel}</button>
                     )}
                 </div>
             ))}
@@ -902,7 +960,6 @@ const NotificationsModal = ({ notifications, onClose }: any) => (
 
 const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => {
     const [viewDate, setViewDate] = useState(new Date(currentDate));
-
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
         const month = date.getMonth();
@@ -910,39 +967,27 @@ const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => {
         const firstDay = new Date(year, month, 1).getDay();
         return { days, firstDay, year, month };
     };
-
     const { days, firstDay, year, month } = getDaysInMonth(viewDate);
     const monthNames = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
-
-    const changeMonth = (offset: number) => {
-        setViewDate(new Date(year, month + offset, 1));
-    };
+    const changeMonth = (offset: number) => setViewDate(new Date(year, month + offset, 1));
 
     return (
         <ModalOverlay onClose={onClose}>
             <div className="flex items-center justify-between mb-4">
-                <button onClick={() => changeMonth(-1)} className="p-2 bg-slate-100 rounded-full"><IconChevronLeft className="w-5 h-5"/></button>
+                <button onClick={() => changeMonth(-1)} className="p-2 bg-slate-100 rounded-full active:scale-95"><IconChevronLeft className="w-5 h-5"/></button>
                 <h3 className="text-lg font-bold text-slate-800">{monthNames[month]} {year}</h3>
-                <button onClick={() => changeMonth(1)} className="p-2 bg-slate-100 rounded-full"><IconChevronRight className="w-5 h-5"/></button>
+                <button onClick={() => changeMonth(1)} className="p-2 bg-slate-100 rounded-full active:scale-95"><IconChevronRight className="w-5 h-5"/></button>
             </div>
-            
             <div className="grid grid-cols-7 gap-1 text-center mb-2">
                 {['D','S','T','Q','Q','S','S'].map(d => <span key={d} className="text-xs font-bold text-slate-400">{d}</span>)}
             </div>
-            
             <div className="grid grid-cols-7 gap-1">
                 {Array.from({ length: firstDay }).map((_, i) => <div key={`empty-${i}`} />)}
                 {Array.from({ length: days }).map((_, i) => {
                     const d = i + 1;
                     const isSelected = d === currentDate.getDate() && month === currentDate.getMonth() && year === currentDate.getFullYear();
                     return (
-                        <button 
-                            key={d} 
-                            onClick={() => onDateSelect(new Date(year, month, d))}
-                            className={`p-2 rounded-lg text-sm font-bold transition-all ${isSelected ? 'bg-cyan-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-200'}`}
-                        >
-                            {d}
-                        </button>
+                        <button key={d} onClick={() => onDateSelect(new Date(year, month, d))} className={`p-2 rounded-lg text-sm font-bold transition-all active:scale-95 ${isSelected ? 'bg-cyan-600 text-white shadow-md' : 'bg-slate-50 text-slate-700 hover:bg-slate-200'}`}>{d}</button>
                     )
                 })}
             </div>
@@ -951,7 +996,6 @@ const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => {
 };
 
 const DownloadModal = ({ appData, currentDate, onClose }: any) => {
-    // Logic for manual save/download JSON
     const handleDownload = () => {
         const json = JSON.stringify(appData);
         const blob = new Blob([json], { type: 'application/json' });
@@ -969,7 +1013,7 @@ const DownloadModal = ({ appData, currentDate, onClose }: any) => {
             <div className="text-center">
                 <IconSave className="w-12 h-12 mx-auto text-slate-400 mb-4"/>
                 <h3 className="text-lg font-bold mb-2">Backup Manual</h3>
-                <button onClick={handleDownload} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold">Baixar JSON</button>
+                <button onClick={handleDownload} className="w-full py-3 bg-slate-800 text-white rounded-xl font-bold active:scale-95">Baixar JSON</button>
             </div>
         </ModalOverlay>
     );
@@ -991,9 +1035,7 @@ const SearchModal = ({ onClose, appData, onSelect, onGallery }: any) => {
         });
         return res;
     }, [term, appData]);
-
     const copyToClipboard = (text: string) => navigator.clipboard.writeText(text);
-
     return (
         <div className="fixed inset-0 z-50 bg-white/95 backdrop-blur-xl p-4 flex flex-col animate-fade-in">
             <div className="flex items-center gap-3 mb-4">
@@ -1001,40 +1043,32 @@ const SearchModal = ({ onClose, appData, onSelect, onGallery }: any) => {
                     <IconSearch className="w-5 h-5 text-slate-400 mr-2"/>
                     <input autoFocus value={term} onChange={e => setTerm(e.target.value)} placeholder="Buscar contrato ou serial..." className="bg-transparent w-full outline-none font-medium"/>
                 </div>
-                <button onClick={onClose} className="p-3 bg-slate-200 rounded-xl font-bold text-slate-600">Fechar</button>
+                <button onClick={onClose} className="p-3 bg-slate-200 rounded-xl font-bold text-slate-600 active:scale-95">Fechar</button>
             </div>
             <div className="flex-1 overflow-y-auto space-y-3">
                 {results.map((r, i) => (
                     <div key={i} className="p-4 bg-white border border-slate-100 rounded-xl shadow-sm hover:shadow-md transition-all">
                         <div className="flex justify-between mb-2">
                              <div className="flex items-center gap-2">
-                                <span onClick={() => onSelect(r)} className="text-xs font-bold bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded cursor-pointer hover:bg-cyan-200">
-                                    {r.date}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-mono">
-                                    {r.item.createdAt ? new Date(r.item.createdAt).toLocaleTimeString() : ''}
-                                </span>
+                                <span onClick={() => onSelect(r)} className="text-xs font-bold bg-cyan-100 text-cyan-700 px-2 py-0.5 rounded cursor-pointer hover:bg-cyan-200">{r.date}</span>
+                                <span className="text-[10px] text-slate-400 font-mono">{r.item.createdAt ? new Date(r.item.createdAt).toLocaleTimeString() : ''}</span>
                              </div>
                             <span className="text-xs font-bold text-slate-400">{r.category}</span>
                         </div>
-                        
                         <div className="space-y-2">
                             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
                                 <span className="text-xs font-bold text-slate-500 w-16">CONTRATO</span>
                                 <span onClick={() => onSelect(r)} className="font-mono text-sm font-semibold text-slate-700 flex-1 cursor-pointer">{r.item.contract}</span>
-                                <button onClick={() => copyToClipboard(r.item.contract)}><IconClipboard className="w-4 h-4 text-slate-400 hover:text-cyan-600"/></button>
+                                <button onClick={() => copyToClipboard(r.item.contract)}><IconClipboard className="w-4 h-4 text-slate-400 hover:text-cyan-600 active:scale-95"/></button>
                             </div>
                             <div className="flex items-center gap-2 bg-slate-50 p-2 rounded-lg border border-slate-100">
                                 <span className="text-xs font-bold text-slate-500 w-16">SERIAL</span>
                                 <span onClick={() => onSelect(r)} className="font-mono text-sm font-semibold text-slate-700 flex-1 cursor-pointer">{r.item.serial}</span>
-                                <button onClick={() => copyToClipboard(r.item.serial)}><IconClipboard className="w-4 h-4 text-slate-400 hover:text-cyan-600"/></button>
+                                <button onClick={() => copyToClipboard(r.item.serial)}><IconClipboard className="w-4 h-4 text-slate-400 hover:text-cyan-600 active:scale-95"/></button>
                             </div>
                         </div>
-
                         {r.item.photos.length > 0 && (
-                             <button onClick={() => onGallery(r.item)} className="mt-2 w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-blue-100">
-                                <IconGallery className="w-4 h-4"/> Ver Foto
-                             </button>
+                             <button onClick={() => onGallery(r.item)} className="mt-2 w-full py-2 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold flex items-center justify-center gap-1 hover:bg-blue-100 active:scale-95"><IconGallery className="w-4 h-4"/> Ver Foto</button>
                         )}
                     </div>
                 ))}
@@ -1048,24 +1082,21 @@ const ConfirmationModal = ({ message, onConfirm, onCancel }: any) => (
         <div className="text-center">
             <h3 className="text-lg font-bold text-slate-800 mb-6">{message}</h3>
             <div className="flex gap-3">
-                <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-600">Cancelar</button>
-                <button onClick={onConfirm} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold shadow-lg">Confirmar</button>
+                <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-slate-100 font-bold text-slate-600 active:scale-95">Cancelar</button>
+                <button onClick={onConfirm} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold shadow-lg active:scale-95">Confirmar</button>
             </div>
         </div>
     </ModalOverlay>
 );
 
 const PhotoGalleryModal = ({ item, isReadOnly, onClose, onUpdatePhotos, setConfirmation }: any) => {
-    // Simplified Gallery for brevity, assuming full logic similar to previous prompt but with ReadOnly check
     return (
         <div className="fixed inset-0 z-50 bg-black flex flex-col">
              <div className="p-4 flex justify-between items-center text-white bg-gradient-to-b from-black/80 to-transparent">
                 <h3 className="font-bold">Fotos do Item</h3>
-                <button onClick={onClose}><IconX className="w-6 h-6"/></button>
+                <button onClick={onClose}><IconX className="w-6 h-6 active:scale-95"/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-4 grid grid-cols-2 gap-4">
-                {/* Images would be displayed here */}
-                {/* In read-only, no delete buttons */}
                 <div className="col-span-2 text-center text-white/50 mt-10">
                     <p>Visualização de Galeria</p>
                     {isReadOnly && <p className="text-xs text-red-400 mt-2">Modo Leitura: Downloads apenas</p>}
@@ -1076,9 +1107,9 @@ const PhotoGalleryModal = ({ item, isReadOnly, onClose, onUpdatePhotos, setConfi
 };
 
 const CameraModal = ({ onClose, onCapture, addNotification }: any) => {
-    // Simplified Camera logic re-using Html5QrcodeScanner
-    const [mode, setMode] = useState<'options' | 'scan' | 'photo'>('options');
-    const [location, setLocation] = useState<string>('');
+    // Modes: Entry menu (options), or active modes
+    const [mode, setMode] = useState<'options' | 'scan_qr' | 'scan_bar' | 'photo'>('options');
+    const [addressInfo, setAddressInfo] = useState<string>('');
     const videoRef = useRef<HTMLVideoElement>(null);
 
     useEffect(() => {
@@ -1087,14 +1118,33 @@ const CameraModal = ({ onClose, onCapture, addNotification }: any) => {
                 .then(stream => { if(videoRef.current) videoRef.current.srcObject = stream; })
                 .catch(err => addNotification('error', 'Erro na câmera: ' + err));
             
+            // Get Geolocation and then Reverse Geocode for Address
             navigator.geolocation.getCurrentPosition(
-                (pos) => setLocation(`Lat: ${pos.coords.latitude.toFixed(4)}, Long: ${pos.coords.longitude.toFixed(4)}`),
-                () => setLocation('Localização indisponível')
+                async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    try {
+                        // OpenStreetMap Reverse Geocoding (Free, rate limited, sufficient for demo)
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+                        const data = await response.json();
+                        const addr = data.address;
+                        const street = addr.road || addr.pedestrian || '';
+                        const number = addr.house_number || '';
+                        const suburb = addr.suburb || addr.neighbourhood || '';
+                        const postcode = addr.postcode || '';
+                        // Format: "Rua X, 123 - Bairro - CEP"
+                        const fullAddress = `${street}${number ? ', ' + number : ''}${suburb ? ' - ' + suburb : ''}${postcode ? '\nCEP: ' + postcode : ''}`;
+                        setAddressInfo(fullAddress);
+                    } catch (e) {
+                        setAddressInfo(`Lat: ${latitude.toFixed(5)}, Long: ${longitude.toFixed(5)}`);
+                    }
+                },
+                (err) => {
+                    console.error("Geo error", err);
+                    setAddressInfo('Localização indisponível');
+                },
+                { enableHighAccuracy: true }
             );
         }
-        return () => { 
-            // Cleanup streams
-        };
     }, [mode]);
 
     const takePhoto = () => {
@@ -1104,79 +1154,159 @@ const CameraModal = ({ onClose, onCapture, addNotification }: any) => {
         canvas.height = videoRef.current.videoHeight;
         const ctx = canvas.getContext('2d');
         if (ctx) {
+            // 1. Draw Video
             ctx.drawImage(videoRef.current, 0, 0);
-            // Draw Watermark
-            ctx.font = '20px Arial';
+            
+            // 2. Add Overlay (Watermark)
+            // Gradient Background for text legibility
+            const gradient = ctx.createLinearGradient(0, canvas.height - 150, 0, canvas.height);
+            gradient.addColorStop(0, "transparent");
+            gradient.addColorStop(1, "rgba(0,0,0,0.8)");
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+
+            // Text Settings
             ctx.fillStyle = 'white';
             ctx.shadowColor = 'black';
             ctx.shadowBlur = 4;
-            ctx.fillText(new Date().toLocaleString(), 20, canvas.height - 50);
-            ctx.fillText(location, 20, canvas.height - 20);
+            ctx.textAlign = 'left';
+
+            // Draw Date/Time
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
+            ctx.font = 'bold 30px Arial';
+            ctx.fillText(dateStr, 30, canvas.height - 80);
+
+            // Draw Address (Split lines if needed)
+            ctx.font = '24px Arial';
+            const lines = addressInfo.split('\n');
+            let y = canvas.height - 40;
+            if (lines.length > 1) y -= 25; // adjust up if multiline
+            lines.forEach((line, i) => {
+                ctx.fillText(line, 30, y + (i * 30));
+            });
             
-            const dataUrl = canvas.toDataURL('image/jpeg');
+            // 3. Generate Blob/URL
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9); // High quality
+            
+            // 4. Trigger Direct Download (Saving to Memory)
             const link = document.createElement('a');
             link.href = dataUrl;
-            link.download = `FOTO_${Date.now()}.jpg`;
+            link.download = `EVIDENCIA_${Date.now()}.jpg`;
+            document.body.appendChild(link);
             link.click();
-            addNotification('success', 'Foto salva na Galeria');
-            onClose();
+            document.body.removeChild(link);
+
+            addNotification('success', 'Foto salva no dispositivo.');
+            
+            // 5. Pass back to app (Optional: pass dataUrl if we want to preview it, otherwise just null to save memory)
+            // We pass it to keep the "Gallery" feature functional, knowing it hits memory limits eventually.
+            onCapture(null, dataUrl); 
         }
     };
 
+    const handleScanSuccess = (decodedText: string) => {
+        // Html5QrcodeScanner cleanup is handled by wrapper
+        onCapture(decodedText);
+    };
+
     return (
-        <div className="fixed inset-0 z-50 bg-black flex flex-col justify-center">
-            <button onClick={onClose} className="absolute top-4 right-4 text-white z-10"><IconX className="w-8 h-8"/></button>
+        <div className="fixed inset-0 z-[60] bg-black flex flex-col justify-center overflow-hidden">
+            <button onClick={onClose} className="absolute top-4 right-4 text-white z-20 p-2 bg-black/40 rounded-full active:scale-95"><IconX className="w-8 h-8"/></button>
             
             {mode === 'options' && (
-                <div className="flex flex-col gap-6 items-center animate-pop-in">
-                    <button onClick={() => setMode('photo')} className="w-24 h-24 rounded-full bg-slate-800 border border-slate-600 flex flex-col items-center justify-center text-white gap-2 shadow-xl active:scale-95 transition-all">
+                <div className="flex flex-col gap-6 items-center animate-pop-in w-full px-8 z-10">
+                    <h2 className="text-white text-2xl font-bold mb-4 tracking-tight">Selecionar Modo</h2>
+                    
+                    <button onClick={() => setMode('photo')} className="w-full py-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 border border-white/10 flex items-center justify-center text-white gap-4 shadow-2xl shadow-blue-900/50 active:scale-95 transition-all">
                         <IconCameraLens className="w-10 h-10"/>
-                        <span className="text-xs font-bold">Tirar Foto</span>
+                        <span className="text-xl font-bold uppercase tracking-wider">Tirar Foto</span>
                     </button>
-                    <button onClick={() => setMode('scan')} className="w-24 h-24 rounded-full bg-cyan-600 border border-cyan-400 flex flex-col items-center justify-center text-white gap-2 shadow-xl active:scale-95 transition-all">
+                    
+                    <button onClick={() => setMode('scan_qr')} className="w-full py-6 rounded-2xl bg-gradient-to-r from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center text-white gap-4 shadow-2xl active:scale-95 transition-all">
                         <IconQrCode className="w-10 h-10"/>
-                        <span className="text-xs font-bold">Ler Código</span>
+                        <span className="text-xl font-bold uppercase tracking-wider">Ler QR Code</span>
+                    </button>
+
+                    <button onClick={() => setMode('scan_bar')} className="w-full py-6 rounded-2xl bg-gradient-to-r from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center text-white gap-4 shadow-2xl active:scale-95 transition-all">
+                        <IconBarcode className="w-10 h-10"/>
+                        <span className="text-xl font-bold uppercase tracking-wider">Cód. Barras</span>
                     </button>
                 </div>
             )}
 
             {mode === 'photo' && (
-                <div className="relative w-full h-full flex items-center justify-center">
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
                     <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
-                    <button onClick={takePhoto} className="absolute bottom-10 w-20 h-20 rounded-full border-4 border-white bg-white/20 backdrop-blur-md active:scale-90 transition-transform shadow-lg"></button>
-                    <div className="absolute bottom-32 left-0 right-0 text-center text-white text-xs drop-shadow-md bg-black/30 py-1">{location}</div>
+                    
+                    {/* Location Badge */}
+                    <div className="absolute top-6 left-4 right-14">
+                        <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-white/10">
+                            <p className="text-xs text-slate-300 font-bold uppercase flex items-center gap-1 mb-1"><IconMapPin className="w-3 h-3 text-cyan-400"/> Localização</p>
+                            <p className="text-white text-xs font-mono leading-tight whitespace-pre-wrap">{addressInfo || "Buscando endereço..."}</p>
+                        </div>
+                    </div>
+
+                    <button onClick={takePhoto} className="absolute bottom-12 w-20 h-20 rounded-full border-4 border-white bg-white/20 backdrop-blur-md active:scale-90 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)] z-20"></button>
                 </div>
             )}
 
-            {mode === 'scan' && (
-                <div className="bg-white p-4 rounded-xl w-11/12 max-w-sm mx-auto">
-                    <div id="reader"></div>
-                    <ScannerComponent onScan={(code: string) => onCapture(code)} />
-                    <p className="text-center text-slate-500 mt-4 text-xs">Aponte para um QR Code ou Código de Barras</p>
+            {(mode === 'scan_qr' || mode === 'scan_bar') && (
+                <div className="relative w-full h-full bg-black flex flex-col">
+                     <div id="reader" className="w-full h-full bg-black"></div>
+                     {/* Custom Overlay for Scanner */}
+                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        {/* Dynamic Box based on Scan Mode */}
+                        <div 
+                            className={`border-2 border-cyan-400 rounded-2xl shadow-[0_0_100px_rgba(34,211,238,0.4)] relative bg-transparent z-10 transition-all duration-300 ${
+                                mode === 'scan_qr' ? 'w-64 h-64' : 'w-80 h-40'
+                            }`}
+                        >
+                            {/* Scanning Line Animation */}
+                            <div className="absolute top-0 left-0 w-full h-0.5 bg-cyan-400 animate-[scan_2s_infinite] shadow-[0_0_10px_#22d3ee]"></div>
+                            
+                            {/* Red Focus Line for Barcode Mode */}
+                            {mode === 'scan_bar' && (
+                                <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+                            )}
+
+                            {/* Corners */}
+                            <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl"></div>
+                            <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl"></div>
+                            <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl"></div>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-cyan-400 rounded-br-xl"></div>
+                        </div>
+                        <p className="absolute bottom-20 text-white font-bold uppercase tracking-widest text-sm bg-black/60 px-4 py-2 rounded-full backdrop-blur-sm">
+                            Aponte para o {mode === 'scan_qr' ? 'QR Code' : 'Código'}
+                        </p>
+                     </div>
+                     
+                     <div className="hidden">
+                        <ScannerComponent onScan={handleScanSuccess} />
+                     </div>
                 </div>
             )}
         </div>
     );
 };
 
-// Helper Scanner Component to handle Html5QrcodeScanner lifecycle
+// Helper Scanner Component to handle Html5QrcodeScanner lifecycle in full screen mode
 const ScannerComponent = ({ onScan }: { onScan: (code: string) => void }) => {
     useEffect(() => {
-        const scanner = new Html5QrcodeScanner(
-            "reader", 
-            { fps: 10, qrbox: 250 }, 
-            /* verbose= */ false
-        );
+        // Use Html5Qrcode directly for more control or Scanner for ease. 
+        // Using Scanner with specific config to fill element
+        const scanner = new Html5QrcodeScanner("reader", { 
+            fps: 10, 
+            qrbox: 250, 
+            aspectRatio: window.innerWidth / window.innerHeight 
+        }, false);
+        
         scanner.render((decodedText) => {
             scanner.clear();
             onScan(decodedText);
-        }, (error) => {
-            // ignore scan errors
-        });
+        }, (error) => {});
 
-        return () => {
-            try { scanner.clear(); } catch(e) {}
-        };
+        return () => { try { scanner.clear(); } catch(e) {} };
     }, []);
     return null;
 };

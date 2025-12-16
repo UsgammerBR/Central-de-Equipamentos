@@ -1,92 +1,76 @@
 import React from 'react';
 
-// Stream+ iOS Style App Icon (Glass & 3D Box) - Hyper Realistic Render Style
+// Stream+ App Icon - Style Reference: Claro Box TV (Matte Black, Rounded, Minimalist)
 export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
     <defs>
-      {/* Background: Brighter, Vibrant "Stream" Gradient */}
-      <linearGradient id="bgBright" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#4f46e5" /> {/* Indigo 600 */}
-        <stop offset="50%" stopColor="#3b82f6" /> {/* Blue 500 */}
-        <stop offset="100%" stopColor="#06b6d4" /> {/* Cyan 500 */}
+      <linearGradient id="bgClean" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#f3f4f6" /> 
+        <stop offset="100%" stopColor="#d1d5db" /> 
       </linearGradient>
 
-      {/* Box Body: Matte Black Texture */}
-      <linearGradient id="boxBody" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#52525b" /> {/* Zinc 600 - Top Light */}
-        <stop offset="100%" stopColor="#18181b" /> {/* Zinc 900 - Shadow */}
+      <linearGradient id="boxBlackMain" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#27272a" /> 
+        <stop offset="100%" stopColor="#09090b" /> 
       </linearGradient>
-
-      {/* Glass Frame Reflection */}
-      <linearGradient id="glassFrame" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="rgba(255,255,255,0.6)" />
-        <stop offset="40%" stopColor="rgba(255,255,255,0.1)" />
-        <stop offset="60%" stopColor="rgba(255,255,255,0.1)" />
-        <stop offset="100%" stopColor="rgba(255,255,255,0.5)" />
-      </linearGradient>
-
-      {/* Soft Shadow for 3D grounding */}
-      <filter id="softShadow" x="-50%" y="-50%" width="200%" height="200%">
+      
+      <filter id="softDropShadow" x="-50%" y="-50%" width="200%" height="200%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-        <feOffset dx="0" dy="4" result="offsetblur" />
+        <feOffset dx="0" dy="5" result="offsetblur" />
         <feComponentTransfer>
-          <feFuncA type="linear" slope="0.4" />
+          <feFuncA type="linear" slope="0.3" />
         </feComponentTransfer>
         <feMerge>
           <feMergeNode />
           <feMergeNode in="SourceGraphic" />
         </feMerge>
       </filter>
+    </defs>
+    
+    <rect x="0" y="0" width="100" height="100" fill="url(#bgClean)" rx="20" />
+    
+    <g transform="translate(50, 52) scale(0.75)" filter="url(#softDropShadow)">
+        <ellipse cx="0" cy="28" rx="45" ry="12" fill="#000" opacity="0.25" filter="blur(4px)" />
+        <path d="M -45 -15 Q -45 -25, -35 -25 L 35 -25 Q 45 -25, 45 -15 L 45 15 Q 45 25, 35 25 L -35 25 Q -45 25, -45 15 Z" fill="url(#boxBlackMain)" />
+        <path d="M -44 15 Q -44 24, -35 24 L 35 24 Q 44 24, 44 15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+        <path d="M -35 -24 L 35 -24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+        <ellipse cx="0" cy="-5" rx="25" ry="10" fill="white" opacity="0.03" />
+        <circle cx="35" cy="15" r="1.5" fill="#ef4444">
+             <animate attributeName="opacity" values="1;0.4;1" dur="3s" repeatCount="indefinite" />
+        </circle>
+        <rect x="-10" y="-2" width="20" height="4" rx="2" fill="rgba(255,255,255,0.1)" />
+    </g>
+    <path d="M 0 0 L 100 0 L 100 100 L 0 100 Z" fill="url(#glassSheen)" opacity="0.1" style={{mixBlendMode: 'overlay'}} />
+  </svg>
+);
 
-      {/* Engraved Text Filter */}
-      <filter id="engrave">
-        <feOffset dx="0" dy="0.5" in="SourceAlpha" result="light"/>
-        <feGaussianBlur in="light" stdDeviation="0.2" result="lightBlur"/>
-        <feSpecularLighting in="lightBlur" surfaceScale="1" specularConstant="0.8" specularExponent="15" lightingColor="rgba(255,255,255,0.4)">
-            <fePointLight x="50" y="-50" z="50"/>
-        </feSpecularLighting>
-        <feComposite in2="SourceAlpha" operator="in" result="highlight"/>
-        <feComposite in2="SourceAlpha" operator="in" result="innerShadow"/>
-        <feMerge>
-             <feMergeNode in="innerShadow"/> 
-             <feMergeNode in="SourceGraphic"/> 
-        </feMerge>
+// Loading Icon with Red/Green LED Blinking
+export const LoadingBoxIcon = ({ className = 'w-32 h-32' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
+    <defs>
+      <linearGradient id="boxBlackMainL" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#27272a" /> 
+        <stop offset="100%" stopColor="#09090b" /> 
+      </linearGradient>
+      <filter id="softDropShadowL" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
+        <feOffset dx="0" dy="6" result="offsetblur" />
+        <feComponentTransfer><feFuncA type="linear" slope="0.4" /></feComponentTransfer>
+        <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
       </filter>
     </defs>
     
-    {/* 1. Main Background Shape */}
-    <rect x="6" y="6" width="88" height="88" rx="20" fill="url(#bgBright)" />
-    
-    {/* 2. Glass Shine Overlay (Gloss) */}
-    <path d="M 6 6 Q 50 60 94 6 L 94 94 Q 50 94 6 94 Z" fill="white" opacity="0.1" />
-    <path d="M 6 6 L 94 6 L 94 45 Q 50 65 6 45 Z" fill="white" opacity="0.15" />
-
-    {/* 3. The Thick Glass Frame (Moldura) */}
-    <rect x="6" y="6" width="88" height="88" rx="20" fill="none" stroke="url(#glassFrame)" strokeWidth="3" />
-    {/* Inner subtle border for depth */}
-    <rect x="8.5" y="8.5" width="83" height="83" rx="18" fill="none" stroke="rgba(0,0,0,0.1)" strokeWidth="1" />
-
-    {/* 4. The 3D Box Device (Centered & Floating) */}
-    <g transform="translate(20, 32)" filter="url(#softShadow)">
-        {/* Main Body (Rounded Rectangle) */}
-        <rect x="0" y="0" width="60" height="36" rx="8" fill="url(#boxBody)" />
+    <g transform="translate(50, 50) scale(0.9)" filter="url(#softDropShadowL)">
+        <ellipse cx="0" cy="28" rx="45" ry="12" fill="#000" opacity="0.3" filter="blur(5px)" />
+        <path d="M -45 -15 Q -45 -25, -35 -25 L 35 -25 Q 45 -25, 45 -15 L 45 15 Q 45 25, 35 25 L -35 25 Q -45 25, -45 15 Z" fill="url(#boxBlackMainL)" />
+        <path d="M -44 15 Q -44 24, -35 24 L 35 24 Q 44 24, 44 15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
+        <path d="M -35 -24 L 35 -24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+        <rect x="-10" y="-2" width="20" height="4" rx="2" fill="rgba(255,255,255,0.1)" />
         
-        {/* Front Face Gradient (Subtle 3D edge at bottom) */}
-        <path d="M 0 28 L 0 36 L 60 36 L 60 28" fill="black" opacity="0.3" />
-        
-        {/* Top Highlight (The "Edge" catching light) */}
-        <path d="M 2 1 L 58 1" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
-
-        {/* Text: STREAM+ (Engraved Look) */}
-        <text x="30" y="21" fontFamily="Arial, sans-serif" fontWeight="800" fontSize="8.5" textAnchor="middle" fill="#1a1a1a" letterSpacing="1.2" filter="url(#engrave)" opacity="0.9">STREAM+</text>
-        
-        {/* Power LED (Small, crisp, glowing) */}
-        <circle cx="53" cy="28" r="1.5" fill="#22d3ee">
-             <animate attributeName="opacity" values="0.8;1;0.8" dur="3s" repeatCount="indefinite" />
-        </circle>
-        {/* LED Glow */}
-        <circle cx="53" cy="28" r="4" fill="#22d3ee" opacity="0.3">
-             <animate attributeName="opacity" values="0.1;0.4;0.1" dur="3s" repeatCount="indefinite" />
+        {/* LED Blinking Green/Red */}
+        <circle cx="35" cy="15" r="2.5">
+             <animate attributeName="fill" values="#ef4444;#22c55e;#ef4444" dur="0.8s" repeatCount="indefinite" />
+             <animate attributeName="opacity" values="1;0.8;1" dur="0.8s" repeatCount="indefinite" />
         </circle>
     </g>
   </svg>
@@ -167,15 +151,15 @@ export const IconSearch = ({ className = 'w-6 h-6' }: { className?: string }) =>
 );
 
 export const IconCamera = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path d="M12 9a3.75 3.75 0 100 7.5A3.75 3.75 0 0012 9z" />
+    <path fillRule="evenodd" d="M9.344 3.071a4.993 4.993 0 015.312 0l.208.107c.068.035.14.07.214.106l1.233.593a4.25 4.25 0 001.792.396h2.296A2.601 2.601 0 0122.898 6.8v10.6a2.6 2.6 0 01-2.599 2.6H3.701A2.6 2.6 0 011.102 17.4V6.8a2.601 2.601 0 012.6-2.599h2.296a4.25 4.25 0 001.792-.396l1.233-.593.214-.106a4.994 4.994 0 01.107-.035zM12 6.75a6 6 0 100 12 6 6 0 000-12z" clipRule="evenodd" />
   </svg>
 );
 
 export const IconGallery = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+    <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
   </svg>
 );
 

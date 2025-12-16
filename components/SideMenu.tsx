@@ -25,17 +25,17 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
         }`}
         onClick={onClose}
       />
-      {/* Ice Glass Sidebar */}
+      {/* Light Glass Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white/40 backdrop-blur-2xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-white/50 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white/70 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-white/40 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-4">
            <div className="flex items-center justify-between mb-8">
-             <CustomMenuIcon className="w-20 h-20 drop-shadow-2xl" />
-             <button onClick={onClose} className="p-2 rounded-full bg-white/30 hover:bg-red-500/20 transition-colors backdrop-blur-md border border-white/30">
-                <IconX className="w-6 h-6 text-slate-600 shadow-sm"/>
+             <CustomMenuIcon className="w-20 h-20 drop-shadow-xl" />
+             <button onClick={onClose} className="p-2 rounded-full bg-black/5 hover:bg-red-500/10 transition-colors border border-black/5 active:scale-90">
+                <IconX className="w-6 h-6 text-slate-700"/>
             </button>
           </div>
 
@@ -44,10 +44,11 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
               <button 
                 key={item.label}
                 onClick={() => onMenuClick(item.modal)} 
-                className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/40 text-lg transition-all text-left border border-transparent hover:border-white/50 active:scale-95 shadow-sm hover:shadow-md group"
+                className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/50 text-lg transition-all text-left border border-transparent hover:border-white/60 active:scale-95 shadow-sm hover:shadow-md group text-slate-800"
               >
-                <item.icon className="w-6 h-6 text-slate-700 group-hover:text-cyan-600 drop-shadow-sm" />
-                <span className="font-bold tracking-wide text-slate-700 drop-shadow-sm">{item.label}</span>
+                {/* Fixed Color: text-cyan-600 */}
+                <item.icon className="w-6 h-6 text-cyan-600 group-hover:scale-110 transition-transform" />
+                <span className="font-bold tracking-wide text-slate-800">{item.label}</span>
               </button>
             ))}
           </nav>
