@@ -36,4 +36,5 @@ export interface AppNotification {
 export interface UserProfile {
     name: string;
     cpf?: string;
+    photo?: string; // Base64 photo of the user
 }

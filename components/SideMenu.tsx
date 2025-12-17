@@ -12,7 +12,7 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
   const menuItems = [
     { label: 'Data', icon: IconCalendar, modal: 'calendar' },
     { label: 'Salvar Manualmente', icon: IconSave, modal: 'save' },
-    { label: 'Exportar', icon: IconExport, modal: 'export' },
+    { label: 'Backup e Dados', icon: IconExport, modal: 'export' },
     { label: 'Configurações', icon: IconSettings, modal: 'settings' },
     { label: 'Sobre', icon: IconInfo, modal: 'about' }
   ];
@@ -25,17 +25,17 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
         }`}
         onClick={onClose}
       />
-      {/* Light Glass Sidebar */}
+      {/* Light Glass Sidebar - Increased transparency (opacity-30) and blur */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white/70 backdrop-blur-xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-white/40 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white/30 backdrop-blur-2xl shadow-2xl z-50 transform transition-transform duration-300 ease-in-out border-r border-white/20 ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         <div className="p-4">
            <div className="flex items-center justify-between mb-8">
              <CustomMenuIcon className="w-20 h-20 drop-shadow-xl" />
-             <button onClick={onClose} className="p-2 rounded-full bg-black/5 hover:bg-red-500/10 transition-colors border border-black/5 active:scale-90">
-                <IconX className="w-6 h-6 text-slate-700"/>
+             <button onClick={onClose} className="p-2 rounded-full bg-white/20 hover:bg-red-500/20 transition-colors border border-white/10 active:scale-90 backdrop-blur-md">
+                <IconX className="w-6 h-6 text-slate-800"/>
             </button>
           </div>
 
@@ -44,11 +44,10 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick }: SideMenuProps) => {
               <button 
                 key={item.label}
                 onClick={() => onMenuClick(item.modal)} 
-                className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/50 text-lg transition-all text-left border border-transparent hover:border-white/60 active:scale-95 shadow-sm hover:shadow-md group text-slate-800"
+                className="flex items-center gap-4 p-4 rounded-xl hover:bg-white/40 text-lg transition-all text-left border border-transparent hover:border-white/30 active:scale-95 shadow-sm hover:shadow-md group text-slate-900 bg-white/10"
               >
-                {/* Fixed Color: text-cyan-600 */}
-                <item.icon className="w-6 h-6 text-cyan-600 group-hover:scale-110 transition-transform" />
-                <span className="font-bold tracking-wide text-slate-800">{item.label}</span>
+                <item.icon className="w-6 h-6 text-cyan-700 group-hover:scale-110 transition-transform drop-shadow-sm" />
+                <span className="font-bold tracking-wide text-slate-900 drop-shadow-sm">{item.label}</span>
               </button>
             ))}
           </nav>
