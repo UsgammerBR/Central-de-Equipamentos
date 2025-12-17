@@ -1,52 +1,27 @@
-const CACHE_NAME = 'equip-control-v2';
+
+const CACHE_NAME = 'equip-control-v3';
 const ASSETS = [
   './',
   './index.html',
-  './index.tsx',
   './manifest.json',
-  './App.tsx',
-  './db.ts',
-  './types.ts',
-  './constants.ts',
-  './components/icons.tsx',
-  './components/SideMenu.tsx'
+  './index.tsx',
+  './App.tsx'
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+  e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
 self.addEventListener('activate', (e) => {
-  e.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(keys.map((key) => {
-        if (key !== CACHE_NAME) return caches.delete(key);
-      }));
-    })
-  );
+  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
-  // Solve 404s on navigation by serving index.html for navigation requests
   if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('./index.html'))
-    );
+    e.respondWith(fetch(e.request).catch(() => caches.match('./index.html')));
     return;
   }
-
-  e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request).then((networkResponse) => {
-        // Optionally cache new resources here
-        return networkResponse;
-      });
-    }).catch(() => {
-        // Fallback for images or specific assets if needed
-    })
-  );
+  e.respondWith(caches.match(e.request).then(res => res || fetch(e.request)));
 });
