@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useReducer, useCallback, useMemo, useRef, ReactNode, Component } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
-    CustomMenuIcon, LoadingBoxIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronRight,
-    IconSave, IconChevronDown, IconBell, IconQrCode, IconBarcode, IconCameraLens, IconMapPin, IconDownload, IconSettings, IconExport, IconCalendar
+    CustomMenuIcon, ChristmasMenuIcon, LoadingBoxIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronRight,
+    IconSave, IconChevronDown, IconBell, IconQrCode, IconBarcode, IconCameraLens, IconMapPin, IconDownload, IconSettings, IconExport, IconCalendar, IconHoliday
 } from './components/icons';
 import { EquipmentCategory, AppData, DailyData, EquipmentItem, AppNotification, UserProfile } from './types';
-import { CATEGORIES } from './constants';
+import { CATEGORIES, HOLIDAYS } from './constants';
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { saveAppDataToDB, loadAppDataFromDB, saveUserProfileToDB, loadUserProfileFromDB, migrateLocalStorageToDB } from './db';
 
@@ -32,7 +32,7 @@ const createEmptyDailyData = (): DailyData => {
   return data;
 };
 
-// --- REDUCER (OPTIMIZED) ---
+// --- REDUCER ---
 
 type Action =
   | { type: 'SET_DATA'; payload: AppData }
@@ -146,21 +146,31 @@ const isItemActive = (item: EquipmentItem): boolean => {
 
 // --- COMPONENTS ---
 
-// Basic UI Components
-const ActionButton = ({ children, onClick, isPrimary, isDanger, disabled }: any) => (
-    <button 
-        onClick={onClick} 
-        disabled={disabled}
-        className={`w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm border ${
-            disabled ? 'opacity-50 cursor-not-allowed bg-slate-200 border-transparent' :
-            isPrimary ? 'bg-cyan-600 text-white border-transparent hover:bg-cyan-500' : 
-            isDanger ? 'bg-red-50 text-red-500 border-red-100' :
-            'bg-white text-cyan-700 border-cyan-100 hover:bg-cyan-50'
-        }`}
-    >
-        {children}
-    </button>
-);
+const ActionButton = ({ children, onClick, isPrimary, isDanger, disabled, theme }: any) => {
+    // Dynamic styles based on theme (Christmas vs Normal)
+    const baseStyle = "w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm border";
+    
+    let colorStyle = "";
+    if (disabled) {
+        colorStyle = "opacity-50 cursor-not-allowed bg-slate-200 border-transparent";
+    } else if (isPrimary) {
+        colorStyle = theme.isXmas 
+            ? "bg-red-600 text-white border-transparent hover:bg-red-500" // Xmas Primary
+            : "bg-cyan-600 text-white border-transparent hover:bg-cyan-500"; // Normal Primary
+    } else if (isDanger) {
+        colorStyle = "bg-red-50 text-red-500 border-red-100";
+    } else {
+        colorStyle = theme.isXmas
+            ? "bg-white text-red-700 border-red-100 hover:bg-red-50" // Xmas Secondary
+            : "bg-white text-cyan-700 border-cyan-100 hover:bg-cyan-50"; // Normal Secondary
+    }
+
+    return (
+        <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${colorStyle}`}>
+            {children}
+        </button>
+    );
+};
 
 const ModalOverlay = ({ children, onClose }: { children?: React.ReactNode, onClose: () => void }) => (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={onClose}>
@@ -171,8 +181,6 @@ const ModalOverlay = ({ children, onClose }: { children?: React.ReactNode, onClo
         </div>
     </div>
 );
-
-// Specialized Modals
 
 const ConfirmationModal = ({ message, onConfirm, onCancel }: { message: string, onConfirm: () => void, onCancel: () => void }) => (
     <ModalOverlay onClose={onCancel}>
@@ -282,14 +290,85 @@ const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => (
     </ModalOverlay>
 );
 
-const SummaryFooter = ({ data, allData, currentDate }: any) => {
-    const totalToday = Object.values(data).reduce<number>((acc, items: any) => acc + items.filter((i:any) => i.contract || i.serial || i.photos.length).length, 0);
+const SummaryFooter = ({ data, allData, theme }: { data: DailyData, allData: AppData, theme: any }) => {
+    // Helper to count non-empty items
+    const countItems = (items: EquipmentItem[]) => items.filter(isItemActive).length;
+
+    // Calculate totals for today per category
+    const stats = {
+        box: countItems(data[EquipmentCategory.BOX] || []),
+        sound: countItems(data[EquipmentCategory.BOX_SOUND] || []),
+        remote: countItems(data[EquipmentCategory.CONTROLE_REMOTO] || []),
+        camera: countItems(data[EquipmentCategory.CAMERA] || []),
+        chip: countItems(data[EquipmentCategory.CHIP] || []),
+    };
+
+    // Total today
+    const totalToday = Object.values(stats).reduce((a, b) => a + b, 0);
+
+    // Grand Total (All time)
+    const totalAllTime = useMemo(() => {
+        let sum = 0;
+        Object.values(allData).forEach(day => {
+            Object.values(day).forEach(items => {
+                sum += countItems(items);
+            });
+        });
+        return sum;
+    }, [allData]);
+
+    // Theme Colors for Totals
+    const textBlue = theme.isXmas ? 'text-red-600' : 'text-blue-600';
+    const textPurple = theme.isXmas ? 'text-green-600' : 'text-purple-600';
+    const bgBlue = theme.isXmas ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100';
+    const bgPurple = theme.isXmas ? 'bg-green-50 border-green-100' : 'bg-purple-50 border-purple-100';
+    const labelBlue = theme.isXmas ? 'text-red-400' : 'text-blue-400';
+    const labelPurple = theme.isXmas ? 'text-green-400' : 'text-purple-400';
+
     return (
-        <div className="fixed bottom-0 left-0 w-full bg-white/90 backdrop-blur-lg border-t border-slate-300 p-3 flex justify-between items-center text-xs font-bold text-slate-800 z-[50] safe-area-pb shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.1)]">
-            <span className="text-sm">Total Hoje: {totalToday} itens</span>
-            <span className="text-[10px] bg-green-100 text-green-800 px-2 py-1 rounded-full flex items-center gap-1 border border-green-200">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
-            </span>
+        <div className="fixed bottom-0 left-0 w-full bg-white/95 backdrop-blur-xl border-t border-slate-300 z-[90] safe-area-pb shadow-[0_-8px_30px_rgba(0,0,0,0.15)] overflow-x-auto">
+            <div className="flex items-center gap-4 p-3 min-w-max text-[10px] font-bold uppercase tracking-wide text-slate-600">
+                <div className="flex flex-col items-center min-w-[30px]">
+                    <span className="text-slate-400 text-[9px]">BOX</span>
+                    <span className="text-sm text-slate-800">{stats.box}</span>
+                </div>
+                <div className="w-px h-6 bg-slate-200"></div>
+                
+                <div className="flex flex-col items-center min-w-[50px]">
+                    <span className="text-slate-400 text-[9px]">BOX SOUND</span>
+                    <span className="text-sm text-slate-800">{stats.sound}</span>
+                </div>
+                <div className="w-px h-6 bg-slate-200"></div>
+
+                <div className="flex flex-col items-center min-w-[80px]">
+                    <span className="text-slate-400 text-[9px]">CONTROLE REMOTO</span>
+                    <span className="text-sm text-slate-800">{stats.remote}</span>
+                </div>
+                <div className="w-px h-6 bg-slate-200"></div>
+
+                <div className="flex flex-col items-center min-w-[40px]">
+                    <span className="text-slate-400 text-[9px]">CAMERA</span>
+                    <span className="text-sm text-slate-800">{stats.camera}</span>
+                </div>
+                <div className="w-px h-6 bg-slate-200"></div>
+
+                <div className="flex flex-col items-center min-w-[30px]">
+                    <span className="text-slate-400 text-[9px]">CHIP</span>
+                    <span className="text-sm text-slate-800">{stats.chip}</span>
+                </div>
+                
+                <div className="w-px h-6 bg-slate-300 mx-1"></div>
+
+                <div className={`flex flex-col items-center px-3 py-1 rounded-lg border ${bgBlue} min-w-[60px]`}>
+                    <span className={`${labelBlue} text-[9px]`}>TOTAL DIA</span>
+                    <span className={`text-base font-extrabold ${textBlue}`}>{totalToday}</span>
+                </div>
+
+                <div className={`flex flex-col items-center px-3 py-1 rounded-lg border ${bgPurple} min-w-[60px]`}>
+                    <span className={`${labelPurple} text-[9px]`}>SOMA TOTAL</span>
+                    <span className={`text-base font-extrabold ${textPurple}`}>{totalAllTime}</span>
+                </div>
+            </div>
         </div>
     );
 }
@@ -363,7 +442,7 @@ const ShareModal = ({ appData, currentDate, onClose, isExportMode, isSharingApp,
                     onImportData(data);
                     onClose();
                 } else {
-                    alert('Arquivo inválido.');
+                    alert('Arquivo inválido ou corrompido.');
                 }
             } catch (err) {
                 console.error(err);
@@ -376,38 +455,38 @@ const ShareModal = ({ appData, currentDate, onClose, isExportMode, isSharingApp,
     return (
         <ModalOverlay onClose={onClose}>
              <h3 className="font-bold text-lg mb-4 text-center">
-                 {isExportMode ? 'Backup e Compartilhamento' : isSharingApp ? 'Compartilhar App' : 'Compartilhar Dados'}
+                 {isExportMode ? 'Backup e Sincronização' : isSharingApp ? 'Compartilhar App' : 'Compartilhar Dados'}
              </h3>
              <div className="grid gap-4">
                  {isExportMode && (
                      <>
-                     <div className="space-y-2">
-                        <p className="text-xs font-bold text-slate-500 uppercase">Backup Offline</p>
-                        <button onClick={handleExportJSON} className="w-full flex items-center gap-3 p-3 bg-slate-100 rounded-xl font-bold text-slate-700 active:scale-95 transition-transform">
-                            <IconDownload className="w-5 h-5"/> Baixar Backup (Arquivo)
-                        </button>
+                     <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
+                        <p className="text-xs font-bold text-blue-700 uppercase mb-2">Sincronização Offline</p>
+                        <p className="text-[11px] text-blue-600 mb-3 leading-tight">
+                            Salve seus dados na memória do celular. Se limpar o cache ou mudar de aparelho, use o botão "Carregar" para restaurar tudo.
+                        </p>
                         
-                        <div className="relative">
-                            <button onClick={() => fileInputRef.current?.click()} className="w-full flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-xl font-bold text-indigo-700 active:scale-95 transition-transform">
-                                <IconExport className="w-5 h-5 rotate-180"/> Restaurar Backup (Importar)
+                        <div className="grid grid-cols-2 gap-3">
+                            <button onClick={handleExportJSON} className="flex flex-col items-center justify-center gap-2 p-3 bg-white rounded-xl shadow-sm border border-blue-200 active:scale-95 transition-transform">
+                                <IconDownload className="w-6 h-6 text-blue-600"/> 
+                                <span className="text-xs font-bold text-blue-800">Salvar Arquivo</span>
                             </button>
-                            <input 
-                                type="file" 
-                                ref={fileInputRef} 
-                                onChange={handleImportFile} 
-                                accept=".json" 
-                                className="hidden" 
-                            />
+                            
+                            <button onClick={() => fileInputRef.current?.click()} className="relative flex flex-col items-center justify-center gap-2 p-3 bg-white rounded-xl shadow-sm border border-blue-200 active:scale-95 transition-transform">
+                                <IconExport className="w-6 h-6 text-blue-600 rotate-180"/> 
+                                <span className="text-xs font-bold text-blue-800">Carregar Arquivo</span>
+                                <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".json" className="absolute inset-0 opacity-0 w-full h-full" />
+                            </button>
                         </div>
                      </div>
 
                      <div className="space-y-2 pt-2 border-t border-slate-100">
-                        <p className="text-xs font-bold text-slate-500 uppercase">Compartilhar (WhatsApp/Telegram)</p>
+                        <p className="text-xs font-bold text-slate-500 uppercase">Compartilhar Online</p>
                         <button onClick={() => {
                              if(navigator.share) navigator.share({ title: 'Stream+ Control', url: window.location.href });
                              else navigator.clipboard.writeText(window.location.href);
-                         }} className="w-full flex items-center gap-3 p-3 bg-cyan-100 rounded-xl font-bold text-cyan-700 active:scale-95 transition-transform">
-                             <IconShare className="w-5 h-5"/> Link do App
+                         }} className="w-full flex items-center gap-3 p-3 bg-cyan-50 rounded-xl font-bold text-cyan-700 active:scale-95 transition-transform">
+                             <IconShare className="w-5 h-5"/> Enviar Link do App
                          </button>
                          <button onClick={() => {
                              const json = JSON.stringify(appData);
@@ -415,8 +494,8 @@ const ShareModal = ({ appData, currentDate, onClose, isExportMode, isSharingApp,
                              const url = `${window.location.origin}${window.location.pathname}#data=${b64}`;
                              if(navigator.share) navigator.share({ title: 'Dados Equipamentos', url });
                              else navigator.clipboard.writeText(url);
-                         }} className="w-full flex items-center gap-3 p-3 bg-green-100 rounded-xl font-bold text-green-700 active:scale-95 transition-transform">
-                             <IconShare className="w-5 h-5"/> Link dos Dados
+                         }} className="w-full flex items-center gap-3 p-3 bg-green-50 rounded-xl font-bold text-green-700 active:scale-95 transition-transform">
+                             <IconShare className="w-5 h-5"/> Enviar Link dos Dados
                          </button>
                      </div>
                      </>
@@ -475,8 +554,22 @@ const AboutModal = ({ userProfile, onClose, onShareClick, onShareDataClick }: an
 const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, installPrompt, onOpenCamera }: any) => {
     const [name, setName] = useState(userProfile.name);
     const [cpf, setCpf] = useState(userProfile.cpf || '');
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleSave = () => { onSaveProfile({ ...userProfile, name, cpf }); onClose(); };
+
+    const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const base64 = event.target?.result as string;
+                onSaveProfile({ ...userProfile, photo: base64 });
+            };
+            reader.readAsDataURL(file);
+        }
+    };
 
     return (
         <ModalOverlay onClose={onClose}>
@@ -494,22 +587,43 @@ const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, insta
                     <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" className="w-full bg-slate-100 rounded-xl p-3 text-left border-none focus:ring-2 focus:ring-cyan-500"/>
                 </div>
                 
-                <button onClick={onOpenCamera} className="w-full py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 active:scale-95 transition-transform flex items-center justify-center gap-2">
-                    <IconCameraLens className="w-5 h-5"/> {userProfile.photo ? 'Trocar Foto de Perfil' : 'Definir Foto de Perfil'}
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                    <button onClick={onOpenCamera} className="py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+                        <IconCameraLens className="w-6 h-6"/> Tirar Foto
+                    </button>
+                    <button onClick={() => fileInputRef.current?.click()} className="relative py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
+                        <IconGallery className="w-6 h-6"/> Carregar da Galeria
+                        <input type="file" ref={fileInputRef} onChange={handleGalleryUpload} accept="image/*" className="absolute inset-0 opacity-0 w-full h-full" />
+                    </button>
+                </div>
+
+                {userProfile.photo && (
+                    <button onClick={() => onSaveProfile({ ...userProfile, photo: undefined })} className="w-full py-2 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs active:scale-95">
+                        Restaurar Ícone Padrão
+                    </button>
+                )}
 
                 <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-700">
                     <p className="font-bold mb-1">Armazenamento Seguro (IndexedDB)</p>
-                    <p>Seus dados são salvos automaticamente. Para mudar de celular, use a opção "Exportar" ou "Compartilhar Dados".</p>
+                    <p>Seus dados são salvos no navegador. Use a função "Exportar" para fazer backup caso precise limpar o cache.</p>
                 </div>
 
                 <div className="pt-4 space-y-3">
                     <button onClick={handleSave} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg active:scale-95 transition-transform">Confirmar</button>
+                    
                     {installPrompt && (
                         <button onClick={() => installPrompt.prompt()} className="w-full py-3 rounded-xl bg-cyan-600 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
-                            <IconDownload className="w-5 h-5" /> Instalar App (PWA)
+                            <IconDownload className="w-5 h-5" /> Instalar App (Android)
                         </button>
                     )}
+
+                    {isIOS && (
+                        <div className="p-3 bg-gray-100 rounded-xl text-center text-xs text-gray-600">
+                            <p className="font-bold mb-1">Instalar no iPhone:</p>
+                            <p>Toque no botão Compartilhar do Safari e escolha "Adicionar à Tela de Início".</p>
+                        </div>
+                    )}
+
                     <button onClick={onClearData} className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-bold border border-red-100 active:scale-95 transition-transform">Limpar Todos os Dados</button>
                 </div>
             </div>
@@ -711,27 +825,47 @@ const CameraModal = ({ onClose, onCapture, addNotification, forcePhotoMode }: an
     );
 };
 
-const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isHistoryVisible, onToggleHistory, onOpenCamera, isReadOnly, onTriggerReadOnly }: any) => {
+const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isHistoryVisible, onToggleHistory, onOpenCamera, isReadOnly, onTriggerReadOnly, theme }: any) => {
     const sortedItems = useMemo(() => {
         return [...allCategoryItems].sort((a: EquipmentItem, b: EquipmentItem) => (a.createdAt || 0) - (b.createdAt || 0));
     }, [allCategoryItems]);
 
     const itemsToDisplay = isHistoryVisible ? sortedItems : sortedItems.slice(-1);
     const copyToClipboard = (text: string) => { if(text) navigator.clipboard.writeText(text); };
+    
+    const activeCount = allCategoryItems.filter(isItemActive).length;
+
+    // Theme Styles
+    const headerGradient = theme.isXmas 
+        ? 'from-red-600 via-green-600 to-red-500' // Christmas Gradient
+        : 'from-indigo-500/90 via-blue-500/90 to-cyan-500/90'; // Normal Gradient
+        
+    // Badge is ALWAYS GREEN in standard mode as requested, but we keep the christmas override logic just in case the user wants it theme-consistent during xmas
+    // However, the prompt specifically asked for "DEIXE NA COR VERDE".
+    // I'll make it green-based.
+    
+    const badgeColor = theme.isXmas 
+        ? 'bg-green-100 text-green-800 border-green-200' 
+        : 'bg-green-100 text-green-800 border-green-200';
+
+    const focusRing = theme.isXmas ? 'focus:ring-red-400' : 'focus:ring-cyan-400';
 
     return (
         <div className="relative">
              <div 
                 className={`w-full p-4 rounded-xl flex items-center justify-between transition-all duration-300 shadow-md relative overflow-hidden border border-white/50 
                     ${isHistoryVisible 
-                        ? 'bg-gradient-to-br from-indigo-500/90 via-blue-500/90 to-cyan-500/90 text-white scale-[1.02] backdrop-blur-md' 
+                        ? `bg-gradient-to-br ${headerGradient} text-white scale-[1.02] backdrop-blur-md` 
                         : 'bg-white/80 text-slate-700 hover:bg-white backdrop-blur-sm'
                     }`}
             >
                 <button onClick={onToggleHistory} className="flex items-center gap-3 relative z-10 flex-1 text-left focus:outline-none w-full active:scale-95 transition-transform">
                     <span className="font-extrabold text-lg tracking-wide uppercase">{category}</span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${isHistoryVisible ? 'bg-white/20' : 'bg-slate-200/50'}`}>
-                        {allCategoryItems.filter(isItemActive).length}
+                    <span 
+                        key={activeCount} 
+                        className={`px-3 py-1 rounded-full text-xs font-black shadow-sm border animate-pulse-green ${badgeColor}`}
+                    >
+                        {activeCount}
                     </span>
                     <div className="ml-auto">
                         {isHistoryVisible ? <IconChevronDown className="w-5 h-5 opacity-60"/> : <IconChevronRight className="w-5 h-5 opacity-60"/>}
@@ -741,7 +875,9 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
 
             <div className="mt-3 grid gap-3 animate-slide-in-up">
                 {itemsToDisplay.map((item: EquipmentItem) => {
-                    const timeString = item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                    const timeString = isHistoryVisible && item.createdAt 
+                        ? new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+                        : '';
 
                     return (
                     <div key={item.id} className={`relative p-2 bg-white/40 backdrop-blur-sm rounded-2xl shadow-lg flex items-center border border-white/30 ${isDeleteMode ? 'pl-10' : ''}`}>
@@ -758,9 +894,11 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
                         )}
                         
                         <div className="flex items-center gap-2 w-full overflow-hidden">
-                            <div className="min-w-[40px] w-12 flex-shrink-0 text-center flex flex-col justify-center">
-                                <span className="text-[10px] font-mono text-slate-500 font-bold leading-tight">{timeString}</span>
-                            </div>
+                            {timeString && (
+                                <div className="min-w-[40px] w-12 flex-shrink-0 text-center flex flex-col justify-center">
+                                    <span className="text-[10px] font-mono text-slate-500 font-bold leading-tight">{timeString}</span>
+                                </div>
+                            )}
 
                             <div className="relative w-24 shrink-0">
                                 <input 
@@ -771,7 +909,7 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
                                     onClick={isReadOnly ? onTriggerReadOnly : undefined}
                                     onChange={(e) => onUpdateItem({ ...item, contract: e.target.value })}
                                     onBlur={() => onUpdateItem(item, 'contract')} 
-                                    className="w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all shadow-inner text-xs border-none"
+                                    className={`w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing} transition-all shadow-inner text-xs border-none`}
                                 />
                                 {item.contract && item.contract.toString().length > 0 && (
                                     <button onClick={() => copyToClipboard(item.contract)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20 active:scale-90">
@@ -789,7 +927,7 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
                                     onClick={isReadOnly ? onTriggerReadOnly : undefined}
                                     onChange={(e) => onUpdateItem({ ...item, serial: e.target.value })}
                                     onBlur={() => onUpdateItem(item, 'serial')}
-                                    className="w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-400 transition-all shadow-inner text-xs border-none"
+                                    className={`w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing} transition-all shadow-inner text-xs border-none`}
                                 />
                                     {item.serial && item.serial.length > 0 && (
                                     <button onClick={() => copyToClipboard(item.serial)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20 active:scale-90">
@@ -829,7 +967,7 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
 interface ErrorBoundaryProps { children?: ReactNode; }
 interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
 
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -872,19 +1010,14 @@ const AppContent = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appData, dispatch] = useReducer(dataReducer, {});
   const [history, setHistory] = useState<AppData[]>([]);
-  const [isRestoring, setIsRestoring] = useState(false);
   const [galleryItem, setGalleryItem] = useState<EquipmentItem | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  
   const [historyVisibleCategories, setHistoryVisibleCategories] = useState<EquipmentCategory[]>([]);
-
   const [isSearchActive, setIsSearchActive] = useState(false);
   const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [duplicateAlert, setDuplicateAlert] = useState<{ foundValue: string; type: string; onConfirm: () => void; onCancel: () => void; } | null>(null);
-  
   const [cameraModalItem, setCameraModalItem] = useState<EquipmentItem | null>(null);
   const [isProfileCameraOpen, setIsProfileCameraOpen] = useState(false);
-
   const [isGlobalDeleteMode, setIsGlobalDeleteMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
@@ -896,13 +1029,43 @@ const AppContent = () => {
   
   const formattedDate = getFormattedDate(currentDate);
 
+  // --- THEME & HOLIDAY LOGIC ---
+
+  const currentHoliday = useMemo(() => {
+    // Check against National/SP holidays list (MM-DD)
+    const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
+    const day = currentDate.getDate().toString().padStart(2, '0');
+    const key = `${month}-${day}`;
+    return HOLIDAYS[key] || null;
+  }, [currentDate]);
+
+  const isChristmasTheme = useMemo(() => {
+      // Logic: Only Dec 20, 21, 22, 23, 24
+      const m = currentDate.getMonth(); // 11 is Dec
+      const d = currentDate.getDate();
+      return m === 11 && (d >= 20 && d <= 24);
+  }, [currentDate]);
+
+  const theme = {
+      isXmas: isChristmasTheme,
+      bg: isChristmasTheme 
+          ? "from-red-50 via-green-50 to-slate-100" // Xmas BG
+          : "from-[#f0f4f8] via-[#e0f2fe] to-[#cbd5e1]", // Normal BG
+      text: isChristmasTheme ? "text-slate-800" : "text-slate-800",
+  };
+
+  const handleHolidayClick = () => {
+      if (currentHoliday) {
+          const query = encodeURIComponent(`feriado ${currentHoliday}`);
+          window.open(`https://www.google.com/search?q=${query}`, '_blank');
+      }
+  };
+
   useEffect(() => {
       const initApp = async () => {
           try {
               const migrated = await migrateLocalStorageToDB();
-              if (migrated) {
-                  addNotification('success', 'Dados antigos recuperados e migrados com sucesso para o novo banco de dados.');
-              }
+              if (migrated) addNotification('success', 'Dados migrados para o novo banco de dados.');
 
               const dbData = await loadAppDataFromDB();
               dispatch({ type: 'SET_DATA', payload: dbData });
@@ -912,7 +1075,7 @@ const AppContent = () => {
 
           } catch (e) {
               console.error("Init Error", e);
-              addNotification('error', 'Erro ao carregar banco de dados.');
+              addNotification('error', 'Erro ao carregar dados.');
           } finally {
               setTimeout(() => setIsLoading(false), 2000); 
           }
@@ -942,11 +1105,11 @@ const AppContent = () => {
                 if (sharedData && typeof sharedData === 'object') {
                     dispatch({ type: 'SET_DATA', payload: sharedData });
                     setIsReadOnly(true);
-                    addNotification('info', 'Visualizando dados compartilhados (Somente Leitura).');
+                    addNotification('info', 'Visualizando dados compartilhados.');
                     window.history.pushState("", document.title, window.location.pathname);
                 }
             } catch (e) {
-                addNotification('error', 'Link compartilhado inválido.');
+                addNotification('error', 'Link inválido.');
             }
         }
   };
@@ -964,7 +1127,7 @@ const AppContent = () => {
         setShowAccessDenied(true);
         return;
     }
-    setHistory(prev => [appData, ...prev].slice(0, 5)); 
+    setHistory(prev => [appData, ...prev].slice(0, 3)); // Reduced history size for memory optimization
     dispatch(action);
   };
 
@@ -977,8 +1140,8 @@ const AppContent = () => {
   useEffect(() => {
       if (isReadOnly || isLoading) return;
       const handler = setTimeout(() => {
-          saveAppDataToDB(appData).catch(err => console.error("Auto-save failed", err));
-      }, 1000); 
+          saveAppDataToDB(appData).catch(err => console.error("Auto-save error", err));
+      }, 2000); // Increased debounce to reduce DB writes
       return () => clearTimeout(handler);
   }, [appData, isReadOnly, isLoading]);
 
@@ -989,19 +1152,19 @@ const AppContent = () => {
 
   const handleRequestAlteration = () => {
       setShowAccessDenied(false);
-      setPopupNotification("Solicitação enviada ao dono do App");
+      setPopupNotification("Solicitação enviada");
       setTimeout(() => {
           setPopupNotification(null);
-          addNotification('request', `Solicitação de alteração recebida.`, 'Permitir', () => {
+          addNotification('request', `Permitir edição?`, 'Sim', () => {
               setIsReadOnly(false);
-              addNotification('success', 'Modo de edição habilitado.');
+              addNotification('success', 'Edição habilitada.');
           });
-      }, 3000);
+      }, 2000);
   };
 
   const handleImportData = (data: AppData) => {
       dispatchWithHistory({ type: 'SET_DATA', payload: data });
-      addNotification('success', 'Dados importados com sucesso!');
+      addNotification('success', 'Backup restaurado com sucesso!');
   };
 
   const currentDayData: DailyData = appData[formattedDate] || createEmptyDailyData();
@@ -1039,7 +1202,7 @@ const AppContent = () => {
               addedAny = true;
           }
       });
-      if (addedAny) addNotification('success', 'Nova linha adicionada.');
+      if (addedAny) addNotification('success', 'Linha adicionada.');
   }, [isReadOnly, currentDayData, formattedDate]);
 
   const handleUpdateItem = useCallback((category: EquipmentCategory, item: EquipmentItem, checkField?: 'contract' | 'serial') => {
@@ -1071,7 +1234,6 @@ const AppContent = () => {
     if (history.length > 0) {
       const previousState = history[0];
       setHistory(history.slice(1));
-      setIsRestoring(true);
       dispatch({ type: 'SET_DATA', payload: previousState });
     }
   }
@@ -1109,7 +1271,7 @@ const AppContent = () => {
   if (isLoading) return <LoadingScreen />;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f0f4f8] via-[#e0f2fe] to-[#cbd5e1] text-slate-800 font-sans pb-32">
+    <div className={`min-h-screen bg-gradient-to-br ${theme.bg} ${theme.text} font-sans pb-32 transition-colors duration-700`}>
        {isMenuOpen && <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(modal) => { setActiveModal(modal); setIsMenuOpen(false); }} />}
       
       <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-xl py-2 px-4 shadow-sm border-b border-white/30 flex flex-col gap-2">
@@ -1117,31 +1279,31 @@ const AppContent = () => {
             <div className="flex-shrink-0 z-20">
                 <div className="active:scale-95 transition-transform cursor-pointer drop-shadow-[0_12px_24px_rgba(0,0,0,0.25)]" onClick={() => setIsMenuOpen(true)}>
                      {userProfile.photo ? (
-                         <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-white shadow-xl">
+                         <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/80 shadow-[0_10px_20px_rgba(0,0,0,0.2)] transform perspective-500 rotate-y-12 hover:rotate-0 transition-transform duration-500 bg-white">
                              <img src={userProfile.photo} alt="Perfil" className="w-full h-full object-cover" />
                          </div>
                      ) : (
-                         <CustomMenuIcon className="w-20 h-20" />
+                         isChristmasTheme ? <ChristmasMenuIcon className="w-24 h-24 animate-pop-in" /> : <CustomMenuIcon className="w-24 h-24" />
                      )}
                 </div>
             </div>
 
             <div className="flex items-center gap-2 z-20">
-                <ActionButton onClick={handleGlobalAdd} disabled={isReadOnly}><IconPlus className="w-4 h-4" /></ActionButton>
-                <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode} disabled={isReadOnly}><IconMinus className="w-4 h-4" /></ActionButton>
+                <ActionButton onClick={handleGlobalAdd} disabled={isReadOnly} theme={theme}><IconPlus className="w-4 h-4" /></ActionButton>
+                <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode} disabled={isReadOnly} theme={theme}><IconMinus className="w-4 h-4" /></ActionButton>
                 {isGlobalDeleteMode && Object.values(selectedItems).reduce<number>((acc, items: string[]) => acc + items.length, 0) > 0 && (
-                <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true} disabled={isReadOnly}><IconTrash className="w-4 h-4" /></ActionButton>
+                <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true} disabled={isReadOnly} theme={theme}><IconTrash className="w-4 h-4" /></ActionButton>
                 )}
-                <ActionButton onClick={handleUndo} disabled={isReadOnly}><IconUndo className="w-4 h-4" /></ActionButton>
-                <ActionButton onClick={() => setIsSearchActive(!isSearchActive)}><IconSearch className="w-4 h-4" /></ActionButton>
+                <ActionButton onClick={handleUndo} disabled={isReadOnly} theme={theme}><IconUndo className="w-4 h-4" /></ActionButton>
+                <ActionButton onClick={() => setIsSearchActive(!isSearchActive)} theme={theme}><IconSearch className="w-4 h-4" /></ActionButton>
                 <div className="relative">
-                    <ActionButton onClick={() => setActiveModal('notifications')}><IconBell className="w-4 h-4" /></ActionButton>
+                    <ActionButton onClick={() => setActiveModal('notifications')} theme={theme}><IconBell className="w-4 h-4" /></ActionButton>
                     {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
                 </div>
             </div>
         </div>
 
-        <div className="flex flex-col items-center justify-center w-full animate-fade-in -mt-1 pb-1">
+        <div className="flex flex-col items-center justify-center w-full animate-fade-in -mt-1 pb-1 relative">
             {userProfile.name && (
                 <div className="w-full text-center px-4 mb-2 mt-2">
                     <h1 className="text-2xl font-sans font-black text-slate-800 tracking-tighter uppercase truncate max-w-[90%] mx-auto drop-shadow-sm">
@@ -1149,12 +1311,24 @@ const AppContent = () => {
                     </h1>
                 </div>
             )}
-            <button onClick={() => setActiveModal('calendar')} className="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-white/70 border border-white/50 backdrop-blur-md shadow-sm active:scale-95 transition-transform hover:bg-white/90 mx-auto mb-1">
-                <span className="text-base font-extrabold text-cyan-800 tracking-tight">
-                    {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                </span>
-                <IconChevronDown className="w-4 h-4 text-cyan-600"/>
-            </button>
+            <div className="relative flex items-center justify-center gap-2">
+                <button onClick={() => setActiveModal('calendar')} className={`inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-white/70 border border-white/50 backdrop-blur-md shadow-sm active:scale-95 transition-transform hover:bg-white/90 ${isChristmasTheme ? 'text-red-700' : 'text-cyan-800'}`}>
+                    <span className="text-base font-extrabold tracking-tight">
+                        {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                    <IconChevronDown className={`w-4 h-4 ${isChristmasTheme ? 'text-red-500' : 'text-cyan-600'}`}/>
+                </button>
+                {/* Holiday Icon Button - Only appears on holidays */}
+                {currentHoliday && (
+                    <button 
+                        onClick={handleHolidayClick} 
+                        className="p-2 rounded-full bg-yellow-300 text-yellow-800 shadow-md animate-bounce active:scale-90 transition-transform"
+                        title={`Feriado: ${currentHoliday}`}
+                    >
+                        <IconHoliday className="w-5 h-5" />
+                    </button>
+                )}
+            </div>
         </div>
       </header>
 
@@ -1177,11 +1351,12 @@ const AppContent = () => {
                 }}
                 isReadOnly={isReadOnly}
                 onTriggerReadOnly={() => setShowAccessDenied(true)}
+                theme={theme}
             />
         ))}
       </main>
 
-      <SummaryFooter data={currentDayData} allData={appData} currentDate={formattedDate} />
+      <SummaryFooter data={currentDayData} allData={appData} theme={theme} />
             
       {galleryItem && <PhotoGalleryModal item={galleryItem} isReadOnly={isReadOnly} onClose={() => setGalleryItem(null)} onUpdatePhotos={(photos: string[]) => {
         const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === galleryItem.id)) as EquipmentCategory;
@@ -1217,18 +1392,16 @@ const AppContent = () => {
                         } else {
                             const updated = { ...cameraModalItem, serial: code };
                             handleUpdateItem(cat, updated);
-                            addNotification('success', 'Código capturado com sucesso.');
+                            addNotification('success', 'Código capturado.');
                         }
                     }
                 }
                 
-                if (!duplicateFound) {
-                     if (photo) {
-                        const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
-                        if(cat) {
-                            const updated = { ...cameraModalItem, photos: [...cameraModalItem.photos, photo] };
-                            handleUpdateItem(cat, updated);
-                        }
+                if (!duplicateFound && photo) {
+                    const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
+                    if(cat) {
+                        const updated = { ...cameraModalItem, photos: [...cameraModalItem.photos, photo] };
+                        handleUpdateItem(cat, updated);
                     }
                 }
                 setCameraModalItem(null);
@@ -1241,7 +1414,7 @@ const AppContent = () => {
             onCapture={(code: string | null, photo?: string) => {
                 if(photo) {
                     saveProfile({ ...userProfile, photo: photo });
-                    addNotification('success', 'Foto de perfil atualizada!');
+                    addNotification('success', 'Foto atualizada!');
                 }
                 setIsProfileCameraOpen(false);
             }}
@@ -1258,7 +1431,7 @@ const AppContent = () => {
             onClose={() => setActiveModal(null)} 
             installPrompt={installPrompt}
             onOpenCamera={() => setIsProfileCameraOpen(true)}
-            onClearData={() => setConfirmation({ message: "Isso apagará o banco de dados local. Tem certeza?", onConfirm: () => { dispatchWithHistory({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); } })}
+            onClearData={() => setConfirmation({ message: "Isso apagará o banco de dados. Tem certeza?", onConfirm: () => { dispatchWithHistory({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); } })}
       />}
       {activeModal === 'about' && <AboutModal userProfile={userProfile} onClose={() => setActiveModal(null)} onShareClick={() => setActiveModal('shareApp')} onShareDataClick={() => setActiveModal('shareData')} />}
       {activeModal === 'shareApp' && <ShareModal appData={appData} currentDate={currentDate} isSharingApp onClose={() => setActiveModal(null)} />}
@@ -1284,9 +1457,9 @@ const AppContent = () => {
                     </div>
                     <h3 className="text-xl font-bold text-slate-800 mb-2">Atenção: Duplicidade</h3>
                     <p className="text-slate-600 mb-4 font-medium">
-                        Este {duplicateAlert.type} <strong>{duplicateAlert.foundValue}</strong> já foi usado anteriormente.
+                        Este {duplicateAlert.type} <strong>{duplicateAlert.foundValue}</strong> já existe.
                     </p>
-                    <p className="text-sm text-slate-500 mb-6">Deseja usar novamente?</p>
+                    <p className="text-sm text-slate-500 mb-6">Usar novamente?</p>
                     
                     <div className="flex gap-3">
                         <button onClick={duplicateAlert.onCancel} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold shadow-lg active:scale-95 transition-all">Não</button>

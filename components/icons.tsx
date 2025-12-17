@@ -44,6 +44,65 @@ export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string
   </svg>
 );
 
+// Christmas Menu Icon (Red Gift Box 3D)
+export const ChristmasMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
+    <defs>
+      <linearGradient id="bgXmas" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#fef2f2" /> 
+        <stop offset="100%" stopColor="#fee2e2" /> 
+      </linearGradient>
+
+      <linearGradient id="boxRedMain" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#dc2626" /> 
+        <stop offset="100%" stopColor="#991b1b" /> 
+      </linearGradient>
+      
+      <linearGradient id="ribbonGold" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%" stopColor="#fcd34d" /> 
+        <stop offset="50%" stopColor="#fffbeb" />
+        <stop offset="100%" stopColor="#fbbf24" /> 
+      </linearGradient>
+
+      <filter id="softDropShadowX" x="-50%" y="-50%" width="200%" height="200%">
+        <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
+        <feOffset dx="0" dy="5" result="offsetblur" />
+        <feComponentTransfer><feFuncA type="linear" slope="0.3" /></feComponentTransfer>
+        <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+    </defs>
+    
+    <rect x="0" y="0" width="100" height="100" fill="url(#bgXmas)" rx="20" />
+    
+    <g transform="translate(50, 52) scale(0.75)" filter="url(#softDropShadowX)">
+        <ellipse cx="0" cy="28" rx="45" ry="12" fill="#000" opacity="0.25" filter="blur(4px)" />
+        {/* Box Body */}
+        <path d="M -45 -15 Q -45 -25, -35 -25 L 35 -25 Q 45 -25, 45 -15 L 45 15 Q 45 25, 35 25 L -35 25 Q -45 25, -45 15 Z" fill="url(#boxRedMain)" />
+        
+        {/* Ribbon Vertical */}
+        <path d="M -10 -25 L 10 -25 L 10 25 L -10 25 Z" fill="url(#ribbonGold)" opacity="0.9" />
+        
+        {/* Ribbon Horizontal Top */}
+        <path d="M -35 -25 L 35 -25 L 35 -18 L -35 -18 Z" fill="url(#ribbonGold)" opacity="0.6" />
+
+        <path d="M -44 15 Q -44 24, -35 24 L 35 24 Q 44 24, 44 15" fill="none" stroke="rgba(255,255,255,0.3)" strokeWidth="1.5" />
+        
+        {/* Bow on Top */}
+        <g transform="translate(0, -35)">
+             <circle cx="0" cy="5" r="5" fill="#fbbf24" />
+             <path d="M 0 5 Q -15 -10, -20 5 Q -10 15, 0 5" fill="#fcd34d" />
+             <path d="M 0 5 Q 15 -10, 20 5 Q 10 15, 0 5" fill="#fcd34d" />
+        </g>
+
+        {/* Green Light */}
+        <circle cx="35" cy="15" r="2" fill="#22c55e">
+             <animate attributeName="opacity" values="1;0.4;1" dur="1.5s" repeatCount="indefinite" />
+        </circle>
+    </g>
+    <path d="M 0 0 L 100 0 L 100 100 L 0 100 Z" fill="white" opacity="0.05" style={{mixBlendMode: 'overlay'}} />
+  </svg>
+);
+
 // Loading Icon with Red/Green LED Blinking Corrected
 export const LoadingBoxIcon = ({ className = 'w-32 h-32' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
@@ -81,6 +140,15 @@ export const LoadingBoxIcon = ({ className = 'w-32 h-32' }: { className?: string
 export const IconCalendar = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+export const IconHoliday = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 2l2 2m-2-2l-2 2m2-2v4" className="opacity-50" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20 5l-2 2m2-2l2 2m-2-2v4" className="opacity-50" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 19l2-2m-2 2l-2-2m2 2v-4" className="opacity-50" />
   </svg>
 );
 
