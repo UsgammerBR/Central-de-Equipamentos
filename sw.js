@@ -1,8 +1,13 @@
-const CACHE_NAME = 'equip-control-v1';
+const CACHE_NAME = 'stream-control-v2';
 const ASSETS = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
+  './index.tsx',
+  './App.tsx',
+  './types.ts',
+  './constants.ts',
+  './db.ts'
 ];
 
 self.addEventListener('install', (e) => {
@@ -16,23 +21,14 @@ self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
-        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+        keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k))
       );
     })
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (e) => {
-  // Fallback de navegação: se o usuário abrir o app ou atualizar uma página, serve o index.html
-  if (e.request.mode === 'navigate') {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match('./index.html'))
-    );
-    return;
-  }
-
   e.respondWith(
-    caches.match(e.request).then((response) => response || fetch(e.request))
+    caches.match(e.request).then((res) => res || fetch(e.request))
   );
 });
