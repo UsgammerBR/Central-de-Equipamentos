@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useReducer, useCallback, useMemo, useRef, ReactNode, Component } from 'react';
 import { SideMenu } from './components/SideMenu';
 import { 
@@ -148,21 +147,24 @@ const isItemActive = (item: EquipmentItem): boolean => {
 // --- COMPONENTS ---
 
 const ActionButton = ({ children, onClick, isPrimary, isDanger, disabled, theme }: any) => {
+    // Dynamic styles based on theme (Christmas vs Normal)
     const baseStyle = "w-8 h-8 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-sm border";
+    
     let colorStyle = "";
     if (disabled) {
         colorStyle = "opacity-50 cursor-not-allowed bg-slate-200 border-transparent";
     } else if (isPrimary) {
         colorStyle = theme.isXmas 
-            ? "bg-red-600 text-white border-transparent hover:bg-red-500" 
-            : "bg-cyan-600 text-white border-transparent hover:bg-cyan-500";
+            ? "bg-red-600 text-white border-transparent hover:bg-red-500" // Xmas Primary
+            : "bg-cyan-600 text-white border-transparent hover:bg-cyan-500"; // Normal Primary
     } else if (isDanger) {
         colorStyle = "bg-red-50 text-red-500 border-red-100";
     } else {
         colorStyle = theme.isXmas
-            ? "bg-white text-red-700 border-red-100 hover:bg-red-50"
-            : "bg-white text-cyan-700 border-cyan-100 hover:bg-cyan-50";
+            ? "bg-white text-red-700 border-red-100 hover:bg-red-50" // Xmas Secondary
+            : "bg-white text-cyan-700 border-cyan-100 hover:bg-cyan-50"; // Normal Secondary
     }
+
     return (
         <button onClick={onClick} disabled={disabled} className={`${baseStyle} ${colorStyle}`}>
             {children}
@@ -289,7 +291,10 @@ const CalendarModal = ({ currentDate, onClose, onDateSelect }: any) => (
 );
 
 const SummaryFooter = ({ data, allData, theme }: { data: DailyData, allData: AppData, theme: any }) => {
+    // Helper to count non-empty items
     const countItems = (items: EquipmentItem[]) => items.filter(isItemActive).length;
+
+    // Calculate totals for today per category
     const stats = {
         box: countItems(data[EquipmentCategory.BOX] || []),
         sound: countItems(data[EquipmentCategory.BOX_SOUND] || []),
@@ -297,15 +302,22 @@ const SummaryFooter = ({ data, allData, theme }: { data: DailyData, allData: App
         camera: countItems(data[EquipmentCategory.CAMERA] || []),
         chip: countItems(data[EquipmentCategory.CHIP] || []),
     };
+
+    // Total today
     const totalToday = Object.values(stats).reduce((a, b) => a + b, 0);
+
+    // Grand Total (All time)
     const totalAllTime = useMemo(() => {
         let sum = 0;
         Object.values(allData).forEach(day => {
-            Object.values(day).forEach(items => { sum += countItems(items); });
+            Object.values(day).forEach(items => {
+                sum += countItems(items);
+            });
         });
         return sum;
     }, [allData]);
 
+    // Theme Colors for Totals
     const textBlue = theme.isXmas ? 'text-red-600' : 'text-blue-600';
     const textPurple = theme.isXmas ? 'text-green-600' : 'text-purple-600';
     const bgBlue = theme.isXmas ? 'bg-red-50 border-red-100' : 'bg-blue-50 border-blue-100';
@@ -321,30 +333,37 @@ const SummaryFooter = ({ data, allData, theme }: { data: DailyData, allData: App
                     <span className="text-sm text-slate-800">{stats.box}</span>
                 </div>
                 <div className="w-px h-6 bg-slate-200"></div>
+                
                 <div className="flex flex-col items-center min-w-[50px]">
                     <span className="text-slate-400 text-[9px]">BOX SOUND</span>
                     <span className="text-sm text-slate-800">{stats.sound}</span>
                 </div>
                 <div className="w-px h-6 bg-slate-200"></div>
+
                 <div className="flex flex-col items-center min-w-[80px]">
                     <span className="text-slate-400 text-[9px]">CONTROLE REMOTO</span>
                     <span className="text-sm text-slate-800">{stats.remote}</span>
                 </div>
                 <div className="w-px h-6 bg-slate-200"></div>
+
                 <div className="flex flex-col items-center min-w-[40px]">
                     <span className="text-slate-400 text-[9px]">CAMERA</span>
                     <span className="text-sm text-slate-800">{stats.camera}</span>
                 </div>
                 <div className="w-px h-6 bg-slate-200"></div>
+
                 <div className="flex flex-col items-center min-w-[30px]">
                     <span className="text-slate-400 text-[9px]">CHIP</span>
                     <span className="text-sm text-slate-800">{stats.chip}</span>
                 </div>
+                
                 <div className="w-px h-6 bg-slate-300 mx-1"></div>
+
                 <div className={`flex flex-col items-center px-3 py-1 rounded-lg border ${bgBlue} min-w-[60px]`}>
                     <span className={`${labelBlue} text-[9px]`}>TOTAL DIA</span>
                     <span className={`text-base font-extrabold ${textBlue}`}>{totalToday}</span>
                 </div>
+
                 <div className={`flex flex-col items-center px-3 py-1 rounded-lg border ${bgPurple} min-w-[60px]`}>
                     <span className={`${labelPurple} text-[9px]`}>SOMA TOTAL</span>
                     <span className={`text-base font-extrabold ${textPurple}`}>{totalAllTime}</span>
@@ -401,26 +420,19 @@ const ShareModal = ({ appData, currentDate, onClose, isExportMode, isSharingApp,
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleExportJSON = () => {
-        try {
-            const json = JSON.stringify(appData, null, 2);
-            const blob = new Blob([json], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `backup_equipamentos_${getFormattedDate(currentDate)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        } catch (err) {
-            console.error("Export error", err);
-            alert("Erro ao exportar arquivo.");
-        }
+        const json = JSON.stringify(appData);
+        const blob = new Blob([json], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `backup_equipamentos_${getFormattedDate(currentDate)}.json`;
+        a.click();
     };
 
     const handleImportFile = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
+
         const reader = new FileReader();
         reader.onload = (e) => {
             try {
@@ -434,7 +446,7 @@ const ShareModal = ({ appData, currentDate, onClose, isExportMode, isSharingApp,
                 }
             } catch (err) {
                 console.error(err);
-                alert('Erro ao processar o arquivo. Verifique o formato JSON.');
+                alert('Erro ao ler arquivo.');
             }
         };
         reader.readAsText(file);
@@ -451,57 +463,89 @@ const ShareModal = ({ appData, currentDate, onClose, isExportMode, isSharingApp,
                      <div className="bg-blue-50 p-4 rounded-xl border border-blue-100">
                         <p className="text-xs font-bold text-blue-700 uppercase mb-2">Sincronização Offline</p>
                         <p className="text-[11px] text-blue-600 mb-3 leading-tight">
-                            Salve seus dados. Se limpar o cache ou mudar de aparelho, carregue o arquivo para restaurar tudo.
+                            Salve seus dados na memória do celular. Se limpar o cache ou mudar de aparelho, use o botão "Carregar" para restaurar tudo.
                         </p>
+                        
                         <div className="grid grid-cols-2 gap-3">
                             <button onClick={handleExportJSON} className="flex flex-col items-center justify-center gap-2 p-3 bg-white rounded-xl shadow-sm border border-blue-200 active:scale-95 transition-transform">
                                 <IconDownload className="w-6 h-6 text-blue-600"/> 
-                                <span className="text-xs font-bold text-blue-800">Exportar</span>
+                                <span className="text-xs font-bold text-blue-800">Salvar Arquivo</span>
                             </button>
+                            
                             <button onClick={() => fileInputRef.current?.click()} className="relative flex flex-col items-center justify-center gap-2 p-3 bg-white rounded-xl shadow-sm border border-blue-200 active:scale-95 transition-transform">
                                 <IconExport className="w-6 h-6 text-blue-600 rotate-180"/> 
-                                <span className="text-xs font-bold text-blue-800">Importar</span>
-                                <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".json" className="absolute inset-0 opacity-0 w-full h-full cursor-pointer" />
+                                <span className="text-xs font-bold text-blue-800">Carregar Arquivo</span>
+                                <input type="file" ref={fileInputRef} onChange={handleImportFile} accept=".json" className="absolute inset-0 opacity-0 w-full h-full" />
                             </button>
                         </div>
                      </div>
+
                      <div className="space-y-2 pt-2 border-t border-slate-100">
+                        <p className="text-xs font-bold text-slate-500 uppercase">Compartilhar Online</p>
                         <button onClick={() => {
-                             if(navigator.share) navigator.share({ title: 'Stream+ Control', url: window.location.origin + window.location.pathname });
-                             else navigator.clipboard.writeText(window.location.origin + window.location.pathname).then(() => alert("Link copiado!"));
+                             if(navigator.share) navigator.share({ title: 'Stream+ Control', url: window.location.href });
+                             else navigator.clipboard.writeText(window.location.href);
                          }} className="w-full flex items-center gap-3 p-3 bg-cyan-50 rounded-xl font-bold text-cyan-700 active:scale-95 transition-transform">
-                             <IconShare className="w-5 h-5"/> Compartilhar Link do App
+                             <IconShare className="w-5 h-5"/> Enviar Link do App
+                         </button>
+                         <button onClick={() => {
+                             const json = JSON.stringify(appData);
+                             const b64 = btoa(json);
+                             const url = `${window.location.origin}${window.location.pathname}#data=${b64}`;
+                             if(navigator.share) navigator.share({ title: 'Dados Equipamentos', url });
+                             else navigator.clipboard.writeText(url);
+                         }} className="w-full flex items-center gap-3 p-3 bg-green-50 rounded-xl font-bold text-green-700 active:scale-95 transition-transform">
+                             <IconShare className="w-5 h-5"/> Enviar Link dos Dados
                          </button>
                      </div>
                      </>
                  )}
                  {isSharingApp && !isExportMode && (
                      <button onClick={() => {
-                         if(navigator.share) navigator.share({ title: 'Stream+ Control', url: window.location.origin + window.location.pathname });
-                         else navigator.clipboard.writeText(window.location.origin + window.location.pathname).then(() => alert("Link copiado!"));
+                         if(navigator.share) navigator.share({ title: 'Stream+ Control', url: window.location.href });
+                         else navigator.clipboard.writeText(window.location.href);
                      }} className="flex items-center gap-3 p-3 bg-cyan-100 rounded-xl font-bold text-cyan-700">
                          <IconShare className="w-5 h-5"/> Link do App
                      </button>
+                 )}
+                 {isSharingData && !isExportMode && (
+                     <div className="text-center">
+                         <p className="text-sm text-slate-500 mb-2">Gera um link com os dados atuais para visualização em outro dispositivo.</p>
+                         <button onClick={() => {
+                             const json = JSON.stringify(appData);
+                             const b64 = btoa(json);
+                             const url = `${window.location.origin}${window.location.pathname}#data=${b64}`;
+                             if(navigator.share) navigator.share({ title: 'Dados Equipamentos', url });
+                             else navigator.clipboard.writeText(url);
+                         }} className="w-full flex items-center justify-center gap-3 p-3 bg-green-100 rounded-xl font-bold text-green-700">
+                             <IconShare className="w-5 h-5"/> Gerar Link
+                         </button>
+                     </div>
                  )}
              </div>
         </ModalOverlay>
     );
 };
 
-const AboutModal = ({ userProfile, onClose, onShareClick }: any) => (
+const AboutModal = ({ userProfile, onClose, onShareClick, onShareDataClick }: any) => (
     <ModalOverlay onClose={onClose}>
         <div className="text-center">
             <CustomMenuIcon className="w-16 h-16 mx-auto mb-2"/>
             <h2 className="font-bold text-xl">Stream+ Control</h2>
-            <p className="text-xs text-slate-400 mb-2">v.1.0.2</p>
+            <p className="text-xs text-slate-400 mb-2">v.1.0.1</p>
             <p className="text-sm text-slate-600 font-bold mb-6">Proprietário: Leo Luz</p>
+            
             <div className="space-y-3">
                 <button onClick={onShareClick} className="w-full py-3 bg-slate-100 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2">
                     <IconShare className="w-5 h-5"/> Compartilhar App
                 </button>
+                 <button onClick={onShareDataClick} className="w-full py-3 bg-slate-100 rounded-xl font-bold text-slate-700 flex items-center justify-center gap-2">
+                    <IconExport className="w-5 h-5"/> Compartilhar Dados
+                </button>
             </div>
+            
             <div className="mt-6 pt-4 border-t border-slate-100 text-xs text-slate-400">
-                <p>Desenvolvido para controle de equipamentos com suporte multiplataforma.</p>
+                <p>Desenvolvido para controle de equipamentos.</p>
             </div>
         </div>
     </ModalOverlay>
@@ -514,6 +558,7 @@ const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, insta
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleSave = () => { onSaveProfile({ ...userProfile, name, cpf }); onClose(); };
+
     const handleGalleryUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
@@ -541,28 +586,44 @@ const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, insta
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">CPF (Opcional)</label>
                     <input type="text" value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" className="w-full bg-slate-100 rounded-xl p-3 text-left border-none focus:ring-2 focus:ring-cyan-500"/>
                 </div>
+                
                 <div className="grid grid-cols-2 gap-2">
                     <button onClick={onOpenCamera} className="py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
                         <IconCameraLens className="w-6 h-6"/> Tirar Foto
                     </button>
                     <button onClick={() => fileInputRef.current?.click()} className="relative py-3 rounded-xl bg-indigo-50 text-indigo-600 font-bold border border-indigo-100 active:scale-95 transition-transform flex flex-col items-center justify-center gap-1 text-xs">
-                        <IconGallery className="w-6 h-6"/> Galeria
+                        <IconGallery className="w-6 h-6"/> Carregar da Galeria
                         <input type="file" ref={fileInputRef} onChange={handleGalleryUpload} accept="image/*" className="absolute inset-0 opacity-0 w-full h-full" />
                     </button>
                 </div>
+
+                {userProfile.photo && (
+                    <button onClick={() => onSaveProfile({ ...userProfile, photo: undefined })} className="w-full py-2 rounded-xl bg-slate-100 text-slate-500 font-bold text-xs active:scale-95">
+                        Restaurar Ícone Padrão
+                    </button>
+                )}
+
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 text-xs text-blue-700">
+                    <p className="font-bold mb-1">Armazenamento Seguro (IndexedDB)</p>
+                    <p>Seus dados são salvos no navegador. Use a função "Exportar" para fazer backup caso precise limpar o cache.</p>
+                </div>
+
                 <div className="pt-4 space-y-3">
                     <button onClick={handleSave} className="w-full py-3 rounded-xl bg-slate-800 text-white font-bold shadow-lg active:scale-95 transition-transform">Confirmar</button>
+                    
                     {installPrompt && (
                         <button onClick={() => installPrompt.prompt()} className="w-full py-3 rounded-xl bg-cyan-600 text-white font-bold shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
-                            <IconDownload className="w-5 h-5" /> Instalar App
+                            <IconDownload className="w-5 h-5" /> Instalar App (Android)
                         </button>
                     )}
+
                     {isIOS && (
                         <div className="p-3 bg-gray-100 rounded-xl text-center text-xs text-gray-600">
                             <p className="font-bold mb-1">Instalar no iPhone:</p>
-                            <p>Toque em "Compartilhar" e "Adicionar à Tela de Início".</p>
+                            <p>Toque no botão Compartilhar do Safari e escolha "Adicionar à Tela de Início".</p>
                         </div>
                     )}
+
                     <button onClick={onClearData} className="w-full py-3 rounded-xl bg-red-50 text-red-500 font-bold border border-red-100 active:scale-95 transition-transform">Limpar Todos os Dados</button>
                 </div>
             </div>
@@ -570,21 +631,240 @@ const SettingsModal = ({ userProfile, onSaveProfile, onClose, onClearData, insta
     );
 };
 
-const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isHistoryVisible, onToggleHistory, onOpenCamera, isReadOnly, theme }: any) => {
+const ScannerComponent = ({ onScan }: { onScan: (decodedText: string) => void }) => {
+  useEffect(() => {
+    // @ts-ignore
+    const scanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: 250 }, false);
+    scanner.render((decodedText: string) => {
+         scanner.clear();
+         onScan(decodedText);
+    }, (error: any) => {});
+    return () => { scanner.clear().catch(console.error); };
+  }, [onScan]);
+  return null;
+};
+
+const CameraModal = ({ onClose, onCapture, addNotification, forcePhotoMode }: any) => {
+    const [mode, setMode] = useState<'options' | 'scan_qr' | 'scan_bar' | 'photo'>(forcePhotoMode ? 'photo' : 'options');
+    const [addressInfo, setAddressInfo] = useState<string>('');
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+
+    // Stop camera when closing
+    useEffect(() => {
+        return () => {
+            if(streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if(mode === 'photo' && videoRef.current) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                .then(stream => { 
+                    streamRef.current = stream;
+                    if(videoRef.current) videoRef.current.srcObject = stream; 
+                })
+                .catch(err => addNotification('error', 'Erro na câmera: ' + err));
+            
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const { latitude, longitude } = pos.coords;
+                    try {
+                        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+                        const data = await response.json();
+                        const addr = data.address;
+                        const street = addr.road || addr.pedestrian || '';
+                        const number = addr.house_number || '';
+                        const suburb = addr.suburb || addr.neighbourhood || '';
+                        const postcode = addr.postcode || '';
+                        const fullAddress = `${street}${number ? ', ' + number : ''}${suburb ? ' - ' + suburb : ''}${postcode ? '\nCEP: ' + postcode : ''}`;
+                        setAddressInfo(fullAddress);
+                    } catch (e) {
+                        setAddressInfo(`Lat: ${latitude.toFixed(5)}, Long: ${longitude.toFixed(5)}`);
+                    }
+                },
+                (err) => {
+                    console.error("Geo error", err);
+                    setAddressInfo('Localização indisponível');
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+    }, [mode]);
+
+    const takePhoto = () => {
+        if (!videoRef.current) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = videoRef.current.videoWidth;
+        canvas.height = videoRef.current.videoHeight;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+            ctx.drawImage(videoRef.current, 0, 0);
+            
+            if (!forcePhotoMode) {
+                const gradient = ctx.createLinearGradient(0, canvas.height - 150, 0, canvas.height);
+                gradient.addColorStop(0, "transparent");
+                gradient.addColorStop(1, "rgba(0,0,0,0.8)");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+
+                ctx.fillStyle = 'white';
+                ctx.shadowColor = 'black';
+                ctx.shadowBlur = 4;
+                ctx.textAlign = 'left';
+
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR');
+                ctx.font = 'bold 30px Arial';
+                ctx.fillText(dateStr, 30, canvas.height - 80);
+
+                ctx.font = '24px Arial';
+                const lines = addressInfo.split('\n');
+                let y = canvas.height - 40;
+                if (lines.length > 1) y -= 25; 
+                lines.forEach((line, i) => {
+                    ctx.fillText(line, 30, y + (i * 30));
+                });
+            }
+            
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.9); 
+            
+            if (!forcePhotoMode) {
+                const link = document.createElement('a');
+                link.href = dataUrl;
+                link.download = `EVIDENCIA_${Date.now()}.jpg`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                addNotification('success', 'Foto salva no dispositivo.');
+            }
+            
+            onCapture(null, dataUrl); 
+        }
+    };
+
+    const handleScanSuccess = (decodedText: string) => {
+        onCapture(decodedText);
+    };
+
+    return (
+        <div className="fixed inset-0 z-[60] bg-black flex flex-col justify-center overflow-hidden">
+            <button onClick={onClose} className="absolute top-4 right-4 text-white z-20 p-2 bg-black/40 rounded-full active:scale-95"><IconX className="w-8 h-8"/></button>
+            
+            {mode === 'options' && (
+                <div className="flex flex-col gap-6 items-center animate-pop-in w-full px-8 z-10">
+                    <h2 className="text-white text-2xl font-bold mb-4 tracking-tight">Selecionar Modo</h2>
+                    
+                    <button onClick={() => setMode('photo')} className="w-full py-6 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 border border-white/10 flex items-center justify-center text-white gap-4 shadow-2xl shadow-blue-900/50 active:scale-95 transition-all">
+                        <IconCameraLens className="w-10 h-10"/>
+                        <span className="text-xl font-bold uppercase tracking-wider">Tirar Foto</span>
+                    </button>
+                    
+                    <button onClick={() => setMode('scan_qr')} className="w-full py-6 rounded-2xl bg-gradient-to-r from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center text-white gap-4 shadow-2xl active:scale-95 transition-all">
+                        <IconQrCode className="w-10 h-10"/>
+                        <span className="text-xl font-bold uppercase tracking-wider">Ler QR Code</span>
+                    </button>
+
+                    <button onClick={() => setMode('scan_bar')} className="w-full py-6 rounded-2xl bg-gradient-to-r from-slate-700 to-slate-800 border border-white/10 flex items-center justify-center text-white gap-4 shadow-2xl active:scale-95 transition-all">
+                        <IconBarcode className="w-10 h-10"/>
+                        <span className="text-xl font-bold uppercase tracking-wider">Cód. Barras</span>
+                    </button>
+                </div>
+            )}
+
+            {mode === 'photo' && (
+                <div className="relative w-full h-full flex items-center justify-center bg-black">
+                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                    
+                    {!forcePhotoMode && (
+                    <div className="absolute top-6 left-4 right-14">
+                        <div className="bg-black/50 backdrop-blur-md rounded-lg p-3 border border-white/10">
+                            <p className="text-xs text-slate-300 font-bold uppercase flex items-center gap-1 mb-1"><IconMapPin className="w-3 h-3 text-cyan-400"/> Localização</p>
+                            <p className="text-white text-xs font-mono leading-tight whitespace-pre-wrap">{addressInfo || "Buscando endereço..."}</p>
+                        </div>
+                    </div>
+                    )}
+
+                    <button onClick={takePhoto} className="absolute bottom-12 w-20 h-20 rounded-full border-4 border-white bg-white/20 backdrop-blur-md active:scale-90 transition-transform shadow-[0_0_30px_rgba(255,255,255,0.3)] z-20"></button>
+                </div>
+            )}
+
+            {(mode === 'scan_qr' || mode === 'scan_bar') && (
+                <div className="relative w-full h-full bg-black flex flex-col">
+                     <div id="reader" className="w-full h-full bg-black"></div>
+                     <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+                        <div 
+                            className={`border-2 border-cyan-400 rounded-2xl shadow-[0_0_100px_rgba(34,211,238,0.4)] relative bg-transparent z-10 transition-all duration-300 ${
+                                mode === 'scan_qr' ? 'w-64 h-64' : 'w-80 h-40'
+                            }`}
+                        >
+                            <div className="absolute top-0 left-0 w-full h-0.5 bg-cyan-400 animate-[scan_2s_infinite] shadow-[0_0_10px_#22d3ee]"></div>
+                            
+                            {mode === 'scan_bar' && (
+                                <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.8)]"></div>
+                            )}
+
+                            <div className="absolute -top-1 -left-1 w-6 h-6 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl"></div>
+                            <div className="absolute -top-1 -right-1 w-6 h-6 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl"></div>
+                            <div className="absolute -bottom-1 -left-1 w-6 h-6 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl"></div>
+                            <div className="absolute -bottom-1 -right-1 w-6 h-6 border-b-4 border-r-4 border-cyan-400 rounded-br-xl"></div>
+                        </div>
+                        <p className="absolute bottom-20 text-white font-bold uppercase tracking-widest text-sm bg-black/60 px-4 py-2 rounded-full backdrop-blur-sm">
+                            Aponte para o {mode === 'scan_qr' ? 'QR Code' : 'Código'}
+                        </p>
+                     </div>
+                     
+                     <div className="hidden">
+                        <ScannerComponent onScan={handleScanSuccess} />
+                     </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isHistoryVisible, onToggleHistory, onOpenCamera, isReadOnly, onTriggerReadOnly, theme }: any) => {
     const sortedItems = useMemo(() => {
         return [...allCategoryItems].sort((a: EquipmentItem, b: EquipmentItem) => (a.createdAt || 0) - (b.createdAt || 0));
     }, [allCategoryItems]);
+
     const itemsToDisplay = isHistoryVisible ? sortedItems : sortedItems.slice(-1);
+    const copyToClipboard = (text: string) => { if(text) navigator.clipboard.writeText(text); };
+    
     const activeCount = allCategoryItems.filter(isItemActive).length;
-    const headerGradient = theme.isXmas ? 'from-red-600 via-green-600 to-red-500' : 'from-indigo-500/90 via-blue-500/90 to-cyan-500/90';
+
+    // Theme Styles
+    const headerGradient = theme.isXmas 
+        ? 'from-red-600 via-green-600 to-red-500' // Christmas Gradient
+        : 'from-indigo-500/90 via-blue-500/90 to-cyan-500/90'; // Normal Gradient
+        
+    // Badge is ALWAYS GREEN in standard mode as requested, but we keep the christmas override logic just in case the user wants it theme-consistent during xmas
+    // However, the prompt specifically asked for "DEIXE NA COR VERDE".
+    // I'll make it green-based.
+    
+    const badgeColor = theme.isXmas 
+        ? 'bg-green-100 text-green-800 border-green-200' 
+        : 'bg-green-100 text-green-800 border-green-200';
+
     const focusRing = theme.isXmas ? 'focus:ring-red-400' : 'focus:ring-cyan-400';
 
     return (
         <div className="relative">
-             <div className={`w-full p-4 rounded-xl flex items-center justify-between transition-all duration-300 shadow-md relative overflow-hidden border border-white/50 ${isHistoryVisible ? `bg-gradient-to-br ${headerGradient} text-white scale-[1.02] backdrop-blur-md` : 'bg-white/80 text-slate-700 hover:bg-white backdrop-blur-sm'}`}>
+             <div 
+                className={`w-full p-4 rounded-xl flex items-center justify-between transition-all duration-300 shadow-md relative overflow-hidden border border-white/50 
+                    ${isHistoryVisible 
+                        ? `bg-gradient-to-br ${headerGradient} text-white scale-[1.02] backdrop-blur-md` 
+                        : 'bg-white/80 text-slate-700 hover:bg-white backdrop-blur-sm'
+                    }`}
+            >
                 <button onClick={onToggleHistory} className="flex items-center gap-3 relative z-10 flex-1 text-left focus:outline-none w-full active:scale-95 transition-transform">
                     <span className="font-extrabold text-lg tracking-wide uppercase">{category}</span>
-                    <span key={activeCount} className={`px-3 py-1 rounded-full text-xs font-black shadow-sm border animate-pulse-green bg-green-100 text-green-800 border-green-200`}>
+                    <span 
+                        key={activeCount} 
+                        className={`px-3 py-1 rounded-full text-xs font-black shadow-sm border animate-pulse-green ${badgeColor}`}
+                    >
                         {activeCount}
                     </span>
                     <div className="ml-auto">
@@ -592,27 +872,87 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
                     </div>
                 </button>
             </div>
+
             <div className="mt-3 grid gap-3 animate-slide-in-up">
                 {itemsToDisplay.map((item: EquipmentItem) => {
-                    const timeString = isHistoryVisible && item.createdAt ? new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+                    const timeString = isHistoryVisible && item.createdAt 
+                        ? new Date(item.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
+                        : '';
+
                     return (
                     <div key={item.id} className={`relative p-2 bg-white/40 backdrop-blur-sm rounded-2xl shadow-lg flex items-center border border-white/30 ${isDeleteMode ? 'pl-10' : ''}`}>
                         {isDeleteMode && (
                             <div className="absolute left-3 z-10">
-                                <input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => onToggleSelect(item.id)} disabled={isReadOnly} className="w-5 h-5 rounded text-cyan-600 focus:ring-cyan-500" />
+                                <input 
+                                    type="checkbox" 
+                                    checked={selectedItems.includes(item.id)}
+                                    onChange={() => onToggleSelect(item.id)}
+                                    disabled={isReadOnly}
+                                    className="w-5 h-5 rounded text-cyan-600 focus:ring-cyan-500"
+                                />
                             </div>
                         )}
+                        
                         <div className="flex items-center gap-2 w-full overflow-hidden">
-                            {timeString && <div className="min-w-[40px] w-12 flex-shrink-0 text-center"><span className="text-[10px] font-mono text-slate-500 font-bold">{timeString}</span></div>}
+                            {timeString && (
+                                <div className="min-w-[40px] w-12 flex-shrink-0 text-center flex flex-col justify-center">
+                                    <span className="text-[10px] font-mono text-slate-500 font-bold leading-tight">{timeString}</span>
+                                </div>
+                            )}
+
                             <div className="relative w-24 shrink-0">
-                                <input type="number" placeholder="CONTRATO" value={item.contract} readOnly={isReadOnly} onChange={(e) => onUpdateItem({ ...item, contract: e.target.value })} onBlur={() => onUpdateItem(item, 'contract')} className={`w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing} transition-all shadow-inner text-xs border-none`}/>
+                                <input 
+                                    type="number" 
+                                    placeholder="CONTRATO" 
+                                    value={item.contract}
+                                    readOnly={isReadOnly}
+                                    onClick={isReadOnly ? onTriggerReadOnly : undefined}
+                                    onChange={(e) => onUpdateItem({ ...item, contract: e.target.value })}
+                                    onBlur={() => onUpdateItem(item, 'contract')} 
+                                    className={`w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing} transition-all shadow-inner text-xs border-none`}
+                                />
+                                {item.contract && item.contract.toString().length > 0 && (
+                                    <button onClick={() => copyToClipboard(item.contract)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20 active:scale-90">
+                                        <IconClipboard className="w-3.5 h-3.5"/>
+                                    </button>
+                                )}
                             </div>
+
                             <div className="relative flex-1 min-w-0">
-                                <input type="text" placeholder="SERIAL" value={item.serial} readOnly={isReadOnly} onChange={(e) => onUpdateItem({ ...item, serial: e.target.value })} onBlur={() => onUpdateItem(item, 'serial')} className={`w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing} transition-all shadow-inner text-xs border-none`}/>
+                                    <input 
+                                    type="text" 
+                                    placeholder="SERIAL" 
+                                    value={item.serial}
+                                    readOnly={isReadOnly}
+                                    onClick={isReadOnly ? onTriggerReadOnly : undefined}
+                                    onChange={(e) => onUpdateItem({ ...item, serial: e.target.value })}
+                                    onBlur={() => onUpdateItem(item, 'serial')}
+                                    className={`w-full bg-white/80 rounded-lg py-3 pl-1 pr-6 text-center font-bold text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 ${focusRing} transition-all shadow-inner text-xs border-none`}
+                                />
+                                    {item.serial && item.serial.length > 0 && (
+                                    <button onClick={() => copyToClipboard(item.serial)} className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-500 hover:text-cyan-600 z-20 active:scale-90">
+                                        <IconClipboard className="w-3.5 h-3.5"/>
+                                    </button>
+                                    )}
                             </div>
+
                             <div className="flex gap-2 shrink-0">
-                                <button onClick={() => onOpenCamera(item)} className="bg-slate-800 text-white p-2 rounded-lg shadow-md active:scale-95 transition-all w-10 h-10 flex items-center justify-center"><IconCamera className="w-5 h-5" /></button>
-                                <button onClick={() => onViewGallery(item)} className={`p-2 rounded-lg shadow-md transition-all active:scale-95 w-10 h-10 flex items-center justify-center ${item.photos.length > 0 ? 'bg-slate-600 text-white' : 'bg-white text-slate-400'}`}><IconGallery className="w-5 h-5" /></button>
+                                <button 
+                                    onClick={() => onOpenCamera(item)}
+                                    className="bg-slate-800 text-white p-2 rounded-lg shadow-md hover:bg-slate-700 active:scale-95 transition-all flex items-center justify-center w-10 h-10 border-none"
+                                >
+                                    <IconCamera className="w-5 h-5" />
+                                </button>
+                                <button 
+                                    onClick={() => onViewGallery(item)}
+                                    className={`p-2 rounded-lg shadow-md transition-all active:scale-95 flex items-center justify-center w-10 h-10 border-none ${
+                                        item.photos.length > 0 
+                                        ? 'bg-slate-600 text-white hover:bg-slate-500' 
+                                        : 'bg-white text-slate-400 hover:bg-slate-50'
+                                    }`}
+                                >
+                                    <IconGallery className="w-5 h-5" />
+                                </button>
                             </div>
                         </div>
                     </div>
@@ -622,26 +962,31 @@ const EquipmentSection = React.memo(({ category, allCategoryItems, onUpdateItem,
     );
 });
 
-interface ErrorBoundaryProps { children?: ReactNode; }
-interface ErrorBoundaryState { hasError: boolean; }
+// --- ERROR BOUNDARY ---
 
-// Corrected ErrorBoundary implementation using React.Component to ensure props/state exist and handle lifecycle properly
-class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+interface ErrorBoundaryProps { children?: ReactNode; }
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, error: null };
   }
 
-  static getDerivedStateFromError(_: any): ErrorBoundaryState {
-    return { hasError: true };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
   }
 
-  render(): ReactNode {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 text-center text-red-600 font-bold">
-          Ocorreu um erro inesperado. 
-          <button className="underline" onClick={() => window.location.reload()}>Recarregar</button>
+        <div className="p-8 text-center text-red-600">
+            <h1>Erro inesperado</h1>
+            <button onClick={() => window.location.reload()}>Recarregar</button>
         </div>
       );
     }
@@ -649,11 +994,22 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 }
 
+// --- LOADING SCREEN ---
+const LoadingScreen = () => (
+    <div className="fixed inset-0 z-[100] bg-slate-100 flex items-center justify-center flex-col animate-fade-in">
+        <LoadingBoxIcon className="w-64 h-64 drop-shadow-2xl" />
+        <p className="mt-4 text-cyan-600 font-bold animate-pulse tracking-widest text-xs">INICIANDO SISTEMA...</p>
+    </div>
+);
+
+// --- MAIN APP ---
+
 const AppContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appData, dispatch] = useReducer(dataReducer, {});
+  const [history, setHistory] = useState<AppData[]>([]);
   const [galleryItem, setGalleryItem] = useState<EquipmentItem | null>(null);
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [historyVisibleCategories, setHistoryVisibleCategories] = useState<EquipmentCategory[]>([]);
@@ -661,103 +1017,341 @@ const AppContent = () => {
   const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const [duplicateAlert, setDuplicateAlert] = useState<{ foundValue: string; type: string; onConfirm: () => void; onCancel: () => void; } | null>(null);
   const [cameraModalItem, setCameraModalItem] = useState<EquipmentItem | null>(null);
+  const [isProfileCameraOpen, setIsProfileCameraOpen] = useState(false);
   const [isGlobalDeleteMode, setIsGlobalDeleteMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile>({ name: '' });
   const [isReadOnly, setIsReadOnly] = useState(false);
+  const [showAccessDenied, setShowAccessDenied] = useState(false);
+  const [popupNotification, setPopupNotification] = useState<string | null>(null);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+  
   const formattedDate = getFormattedDate(currentDate);
 
+  // --- THEME & HOLIDAY LOGIC ---
+
   const currentHoliday = useMemo(() => {
+    // Check against National/SP holidays list (MM-DD)
     const month = (currentDate.getMonth() + 1).toString().padStart(2, '0');
     const day = currentDate.getDate().toString().padStart(2, '0');
-    return HOLIDAYS[`${month}-${day}`] || null;
+    const key = `${month}-${day}`;
+    return HOLIDAYS[key] || null;
   }, [currentDate]);
 
   const isChristmasTheme = useMemo(() => {
-      const m = currentDate.getMonth();
+      // Logic: Only Dec 20, 21, 22, 23, 24
+      const m = currentDate.getMonth(); // 11 is Dec
       const d = currentDate.getDate();
       return m === 11 && (d >= 20 && d <= 24);
   }, [currentDate]);
 
-  const theme = { isXmas: isChristmasTheme, bg: isChristmasTheme ? "from-red-50 via-green-50 to-slate-100" : "from-[#f0f4f8] via-[#e0f2fe] to-[#cbd5e1]", text: "text-slate-800" };
+  const theme = {
+      isXmas: isChristmasTheme,
+      bg: isChristmasTheme 
+          ? "from-red-50 via-green-50 to-slate-100" // Xmas BG
+          : "from-[#f0f4f8] via-[#e0f2fe] to-[#cbd5e1]", // Normal BG
+      text: isChristmasTheme ? "text-slate-800" : "text-slate-800",
+  };
+
+  const handleHolidayClick = () => {
+      if (currentHoliday) {
+          const query = encodeURIComponent(`feriado ${currentHoliday}`);
+          window.open(`https://www.google.com/search?q=${query}`, '_blank');
+      }
+  };
 
   useEffect(() => {
       const initApp = async () => {
           try {
-              await migrateLocalStorageToDB();
+              const migrated = await migrateLocalStorageToDB();
+              if (migrated) addNotification('success', 'Dados migrados para o novo banco de dados.');
+
               const dbData = await loadAppDataFromDB();
               dispatch({ type: 'SET_DATA', payload: dbData });
+
               const dbProfile = await loadUserProfileFromDB();
               if (dbProfile) setUserProfile(dbProfile);
-          } catch (e) { console.error(e); }
-          finally { setTimeout(() => setIsLoading(false), 1500); }
+
+          } catch (e) {
+              console.error("Init Error", e);
+              addNotification('error', 'Erro ao carregar dados.');
+          } finally {
+              setTimeout(() => setIsLoading(false), 2000); 
+          }
       };
+
       initApp();
-      window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); setInstallPrompt(e); });
-      if ('serviceWorker' in navigator) { navigator.serviceWorker.register('./sw.js').catch(() => {}); }
+      checkHash();
+      
+      // SW Registration
+      if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.register('./sw.js').catch(err => console.error("SW fail", err));
+      }
+
+      window.addEventListener('beforeinstallprompt', (e) => {
+          e.preventDefault();
+          setInstallPrompt(e);
+      });
   }, []);
+
+  const checkHash = () => {
+        const hash = window.location.hash;
+        if (hash.startsWith('#data=')) {
+            try {
+                const b64 = hash.replace('#data=', '');
+                const json = atob(b64);
+                const sharedData = JSON.parse(json);
+                if (sharedData && typeof sharedData === 'object') {
+                    dispatch({ type: 'SET_DATA', payload: sharedData });
+                    setIsReadOnly(true);
+                    addNotification('info', 'Visualizando dados compartilhados.');
+                    window.history.pushState("", document.title, window.location.pathname);
+                }
+            } catch (e) {
+                addNotification('error', 'Link inválido.');
+            }
+        }
+  };
+
+  const addNotification = (type: 'info' | 'error' | 'success' | 'request', message: string, actionLabel?: string, onAction?: () => void) => {
+    const newNotif: AppNotification = {
+        id: generateId(),
+        type, message, timestamp: Date.now(), read: false, actionLabel, onAction
+    };
+    setNotifications(prev => [newNotif, ...prev]);
+  };
+
+  const dispatchWithHistory = (action: Action) => {
+    if (isReadOnly) {
+        setShowAccessDenied(true);
+        return;
+    }
+    setHistory(prev => [appData, ...prev].slice(0, 3)); // Reduced history size for memory optimization
+    dispatch(action);
+  };
+
+  useEffect(() => {
+    if (!appData[formattedDate]) {
+      dispatch({ type: 'ENSURE_DAY_DATA', payload: { date: formattedDate, dayData: createEmptyDailyData() } });
+    }
+  }, [appData, formattedDate]);
 
   useEffect(() => {
       if (isReadOnly || isLoading) return;
-      const handler = setTimeout(() => { saveAppDataToDB(appData).catch(() => {}); }, 1500);
+      const handler = setTimeout(() => {
+          saveAppDataToDB(appData).catch(err => console.error("Auto-save error", err));
+      }, 2000); // Increased debounce to reduce DB writes
       return () => clearTimeout(handler);
   }, [appData, isReadOnly, isLoading]);
 
+  const saveProfile = (p: UserProfile) => {
+      setUserProfile(p);
+      saveUserProfileToDB(p);
+  };
+
+  const handleRequestAlteration = () => {
+      setShowAccessDenied(false);
+      setPopupNotification("Solicitação enviada");
+      setTimeout(() => {
+          setPopupNotification(null);
+          addNotification('request', `Permitir edição?`, 'Sim', () => {
+              setIsReadOnly(false);
+              addNotification('success', 'Edição habilitada.');
+          });
+      }, 2000);
+  };
+
+  const handleImportData = (data: AppData) => {
+      dispatchWithHistory({ type: 'SET_DATA', payload: data });
+      addNotification('success', 'Backup restaurado com sucesso!');
+  };
+
   const currentDayData: DailyData = appData[formattedDate] || createEmptyDailyData();
 
-  const handleUpdateItem = useCallback((category: EquipmentCategory, item: EquipmentItem) => {
-      if (isReadOnly) return;
-      dispatch({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item } });
-  }, [isReadOnly, formattedDate]);
+  const checkDuplicate = useCallback((type: 'contract' | 'serial', value: string, currentId: string) => {
+      if (!value || value.length < 3) return false;
+      let isDuplicate = false;
+      for (const dateKey in appData) {
+          const day = appData[dateKey];
+          for (const catKey in day) {
+              const items = day[catKey as EquipmentCategory];
+              for (const item of items) {
+                  if (item.id !== currentId) {
+                      if ((type === 'contract' && item.contract === value) || (type === 'serial' && item.serial === value)) {
+                          isDuplicate = true;
+                          break;
+                      }
+                  }
+              }
+              if(isDuplicate) break;
+          }
+          if(isDuplicate) break;
+      }
+      return isDuplicate;
+  }, [appData]);
 
-  if (isLoading) return <div className="fixed inset-0 bg-slate-50 flex items-center justify-center flex-col animate-fade-in"><LoadingBoxIcon className="w-48 h-48 drop-shadow-xl" /><p className="mt-4 text-cyan-600 font-bold animate-pulse">CARREGANDO SISTEMA...</p></div>;
+  const handleGlobalAdd = useCallback(() => {
+      if (isReadOnly) { setShowAccessDenied(true); return; }
+      let addedAny = false;
+      CATEGORIES.forEach(cat => {
+          const items = currentDayData[cat] || [];
+          const lastItem = items[items.length - 1];
+          if (lastItem && (lastItem.contract || lastItem.serial || lastItem.photos.length > 0)) {
+              dispatchWithHistory({ type: 'ADD_ITEM', payload: { date: formattedDate, category: cat } });
+              addedAny = true;
+          }
+      });
+      if (addedAny) addNotification('success', 'Linha adicionada.');
+  }, [isReadOnly, currentDayData, formattedDate]);
+
+  const handleUpdateItem = useCallback((category: EquipmentCategory, item: EquipmentItem, checkField?: 'contract' | 'serial') => {
+      if (isReadOnly) { setShowAccessDenied(true); return; }
+      if (checkField) {
+          const value = checkField === 'contract' ? item.contract : item.serial;
+          if (checkDuplicate(checkField, value, item.id)) {
+             setDuplicateAlert({
+                 foundValue: value,
+                 type: checkField === 'contract' ? 'Contrato' : 'Serial',
+                 onConfirm: () => {
+                     dispatchWithHistory({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item } });
+                     setDuplicateAlert(null);
+                 },
+                 onCancel: () => {
+                     const clearedItem = { ...item, [checkField]: '' };
+                     dispatchWithHistory({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item: clearedItem } });
+                     setDuplicateAlert(null);
+                 }
+             });
+             return; 
+          }
+      }
+      dispatchWithHistory({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item } });
+  }, [isReadOnly, formattedDate, checkDuplicate]);
+
+  const handleUndo = () => {
+    if (isReadOnly) { setShowAccessDenied(true); return; }
+    if (history.length > 0) {
+      const previousState = history[0];
+      setHistory(history.slice(1));
+      dispatch({ type: 'SET_DATA', payload: previousState });
+    }
+  }
+
+  const handleToggleDeleteMode = () => {
+    if (isReadOnly) { setShowAccessDenied(true); return; }
+    setIsGlobalDeleteMode(prev => !prev);
+    setSelectedItems({}); 
+  };
+
+  const handleConfirmGlobalDelete = () => {
+      if (isReadOnly) { setShowAccessDenied(true); return; }
+      const totalSelected = Object.values(selectedItems).reduce<number>((sum, ids: string[]) => sum + ids.length, 0);
+      if (totalSelected > 0) {
+        setConfirmation({
+            message: `Apagar ${totalSelected} item(s)?`,
+            onConfirm: () => {
+                Object.entries(selectedItems).forEach(([cat, ids]: [string, string[]]) => {
+                    if (ids.length > 0) dispatchWithHistory({ type: 'DELETE_ITEMS', payload: { date: formattedDate, category: cat as EquipmentCategory, itemIds: ids } });
+                });
+                handleToggleDeleteMode(); 
+            }
+        });
+      }
+  };
+
+  const unreadCount = notifications.filter(n => !n.read).length;
+
+  const toggleHistoryVisibility = useCallback((cat: EquipmentCategory) => {
+      setHistoryVisibleCategories(prev => 
+        prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]
+      );
+  }, []);
+
+  if (isLoading) return <LoadingScreen />;
 
   return (
     <div className={`min-h-screen bg-gradient-to-br ${theme.bg} ${theme.text} font-sans pb-32 transition-colors duration-700`}>
-       {isMenuOpen && <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(m) => { setActiveModal(m); setIsMenuOpen(false); }} />}
+       {isMenuOpen && <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={(modal) => { setActiveModal(modal); setIsMenuOpen(false); }} />}
+      
       <header className="sticky top-0 z-30 bg-white/40 backdrop-blur-xl py-2 px-4 shadow-sm border-b border-white/30 flex flex-col gap-2">
         <div className="flex items-center justify-between w-full">
-            <div className="flex-shrink-0" onClick={() => setIsMenuOpen(true)}>
-                <div className="active:scale-95 transition-transform cursor-pointer drop-shadow-lg">
+            <div className="flex-shrink-0 z-20">
+                <div className="active:scale-95 transition-transform cursor-pointer drop-shadow-[0_12px_24px_rgba(0,0,0,0.25)]" onClick={() => setIsMenuOpen(true)}>
                      {userProfile.photo ? (
-                         <div className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-white/80 shadow-md bg-white">
+                         <div className="w-24 h-24 rounded-2xl overflow-hidden border-4 border-white/80 shadow-[0_10px_20px_rgba(0,0,0,0.2)] transform perspective-500 rotate-y-12 hover:rotate-0 transition-transform duration-500 bg-white">
                              <img src={userProfile.photo} alt="Perfil" className="w-full h-full object-cover" />
                          </div>
-                     ) : ( isChristmasTheme ? <ChristmasMenuIcon className="w-20 h-20" /> : <CustomMenuIcon className="w-20 h-20" /> )}
+                     ) : (
+                         isChristmasTheme ? <ChristmasMenuIcon className="w-24 h-24 animate-pop-in" /> : <CustomMenuIcon className="w-24 h-24" />
+                     )}
                 </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 z-20">
+                <ActionButton onClick={handleGlobalAdd} disabled={isReadOnly} theme={theme}><IconPlus className="w-4 h-4" /></ActionButton>
+                <ActionButton onClick={handleToggleDeleteMode} isDanger={isGlobalDeleteMode} disabled={isReadOnly} theme={theme}><IconMinus className="w-4 h-4" /></ActionButton>
+                {isGlobalDeleteMode && Object.values(selectedItems).reduce<number>((acc, items: string[]) => acc + items.length, 0) > 0 && (
+                <ActionButton onClick={handleConfirmGlobalDelete} isDanger={true} disabled={isReadOnly} theme={theme}><IconTrash className="w-4 h-4" /></ActionButton>
+                )}
+                <ActionButton onClick={handleUndo} disabled={isReadOnly} theme={theme}><IconUndo className="w-4 h-4" /></ActionButton>
                 <ActionButton onClick={() => setIsSearchActive(!isSearchActive)} theme={theme}><IconSearch className="w-4 h-4" /></ActionButton>
                 <div className="relative">
                     <ActionButton onClick={() => setActiveModal('notifications')} theme={theme}><IconBell className="w-4 h-4" /></ActionButton>
-                    {notifications.some(n=>!n.read) && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
+                    {unreadCount > 0 && <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse" />}
                 </div>
             </div>
         </div>
-        <div className="flex flex-col items-center justify-center w-full pb-1">
-            {userProfile.name && <h1 className="text-xl font-black text-slate-800 tracking-tighter uppercase mb-1">{userProfile.name}</h1>}
-            <div className="flex items-center gap-2">
-                <button onClick={() => setActiveModal('calendar')} className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/70 border border-white/50 backdrop-blur-md shadow-sm font-extrabold text-cyan-800">
-                    {currentDate.toLocaleDateString('pt-BR')} <IconChevronDown className="w-4 h-4"/>
+
+        <div className="flex flex-col items-center justify-center w-full animate-fade-in -mt-1 pb-1 relative">
+            {userProfile.name && (
+                <div className="w-full text-center px-4 mb-2 mt-2">
+                    <h1 className="text-2xl font-sans font-black text-slate-800 tracking-tighter uppercase truncate max-w-[90%] mx-auto drop-shadow-sm">
+                        {userProfile.name}
+                    </h1>
+                </div>
+            )}
+            <div className="relative flex items-center justify-center gap-2">
+                <button onClick={() => setActiveModal('calendar')} className={`inline-flex items-center justify-center gap-2 px-5 py-2 rounded-full bg-white/70 border border-white/50 backdrop-blur-md shadow-sm active:scale-95 transition-transform hover:bg-white/90 ${isChristmasTheme ? 'text-red-700' : 'text-cyan-800'}`}>
+                    <span className="text-base font-extrabold tracking-tight">
+                        {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                    </span>
+                    <IconChevronDown className={`w-4 h-4 ${isChristmasTheme ? 'text-red-500' : 'text-cyan-600'}`}/>
                 </button>
-                {currentHoliday && <button onClick={() => window.open(`https://www.google.com/search?q=feriado ${currentHoliday}`, '_blank')} className="p-2 rounded-full bg-yellow-300 text-yellow-800 shadow-md animate-bounce"><IconHoliday className="w-5 h-5" /></button>}
+                {/* Holiday Icon Button - Only appears on holidays */}
+                {currentHoliday && (
+                    <button 
+                        onClick={handleHolidayClick} 
+                        className="p-2 rounded-full bg-yellow-300 text-yellow-800 shadow-md animate-bounce active:scale-90 transition-transform"
+                        title={`Feriado: ${currentHoliday}`}
+                    >
+                        <IconHoliday className="w-5 h-5" />
+                    </button>
+                )}
             </div>
         </div>
       </header>
 
-      <main className="container mx-auto p-3 space-y-4">
+      <main className="container mx-auto p-3 space-y-5 mt-2">
         {CATEGORIES.map(category => (
-            <EquipmentSection key={`${formattedDate}-${category}`} category={category} allCategoryItems={currentDayData[category] || []}
-                onUpdateItem={(item: EquipmentItem) => handleUpdateItem(category, item)}
+            <EquipmentSection 
+                key={`${formattedDate}-${category}`} 
+                category={category} 
+                allCategoryItems={currentDayData[category] || []}
+                onUpdateItem={(item: EquipmentItem, checkField?: 'contract' | 'serial') => handleUpdateItem(category, item, checkField)}
                 onViewGallery={(item: EquipmentItem) => setGalleryItem(item)}
-                isDeleteMode={isGlobalDeleteMode} selectedItems={selectedItems[category] || []}
+                isDeleteMode={isGlobalDeleteMode}
+                selectedItems={selectedItems[category] || []}
                 onToggleSelect={(id: string) => setSelectedItems(prev => ({ ...prev, [category]: prev[category]?.includes(id) ? prev[category].filter(i => i !== id) : [...(prev[category]||[]), id] }))}
                 isHistoryVisible={historyVisibleCategories.includes(category)}
-                onToggleHistory={() => setHistoryVisibleCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category])}
-                onOpenCamera={(item: EquipmentItem) => setCameraModalItem(item)}
-                isReadOnly={isReadOnly} theme={theme}
+                onToggleHistory={() => toggleHistoryVisibility(category)}
+                onOpenCamera={(item: EquipmentItem) => {
+                    if(isReadOnly) setShowAccessDenied(true);
+                    else setCameraModalItem(item);
+                }}
+                isReadOnly={isReadOnly}
+                onTriggerReadOnly={() => setShowAccessDenied(true)}
+                theme={theme}
             />
         ))}
       </main>
@@ -766,17 +1360,128 @@ const AppContent = () => {
             
       {galleryItem && <PhotoGalleryModal item={galleryItem} isReadOnly={isReadOnly} onClose={() => setGalleryItem(null)} onUpdatePhotos={(photos: string[]) => {
         const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === galleryItem.id)) as EquipmentCategory;
-        if(cat) { const updated = { ...galleryItem, photos }; handleUpdateItem(cat, updated); setGalleryItem(updated); }
+        if(cat) {
+            const updated = { ...galleryItem, photos };
+            handleUpdateItem(cat, updated);
+            setGalleryItem(updated);
+        }
       }} setConfirmation={setConfirmation} />}
       
+      {cameraModalItem && <CameraModal 
+            onClose={() => setCameraModalItem(null)} 
+            onCapture={(code: string | null, photo?: string) => {
+                let duplicateFound = false;
+                if (code) {
+                    const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
+                    if (cat) {
+                        if (checkDuplicate('serial', code, cameraModalItem.id)) {
+                             duplicateFound = true;
+                             setDuplicateAlert({
+                                 foundValue: code,
+                                 type: 'Serial',
+                                 onConfirm: () => {
+                                     const updated = { ...cameraModalItem, serial: code };
+                                     handleUpdateItem(cat, updated);
+                                     addNotification('success', 'Código capturado (Duplicado Aceito).');
+                                     setDuplicateAlert(null);
+                                 },
+                                 onCancel: () => {
+                                     setDuplicateAlert(null);
+                                 }
+                             });
+                        } else {
+                            const updated = { ...cameraModalItem, serial: code };
+                            handleUpdateItem(cat, updated);
+                            addNotification('success', 'Código capturado.');
+                        }
+                    }
+                }
+                
+                if (!duplicateFound && photo) {
+                    const cat = Object.keys(currentDayData).find(k => currentDayData[k as EquipmentCategory].some(i => i.id === cameraModalItem.id)) as EquipmentCategory;
+                    if(cat) {
+                        const updated = { ...cameraModalItem, photos: [...cameraModalItem.photos, photo] };
+                        handleUpdateItem(cat, updated);
+                    }
+                }
+                setCameraModalItem(null);
+            }} 
+            addNotification={addNotification}
+      />}
+
+      {isProfileCameraOpen && <CameraModal 
+            onClose={() => setIsProfileCameraOpen(false)}
+            onCapture={(code: string | null, photo?: string) => {
+                if(photo) {
+                    saveProfile({ ...userProfile, photo: photo });
+                    addNotification('success', 'Foto atualizada!');
+                }
+                setIsProfileCameraOpen(false);
+            }}
+            addNotification={addNotification}
+            forcePhotoMode={true} 
+      />}
+
       {activeModal === 'calendar' && <CalendarModal currentDate={currentDate} onClose={() => setActiveModal(null)} onDateSelect={(d: Date) => { setCurrentDate(d); setActiveModal(null); }}/>}
-      {activeModal === 'export' && <ShareModal appData={appData} currentDate={currentDate} onClose={() => setActiveModal(null)} isExportMode={true} onImportData={(d: AppData) => dispatch({ type: 'SET_DATA', payload: d })} />}
-      {activeModal === 'settings' && <SettingsModal userProfile={userProfile} onSaveProfile={(p: UserProfile) => { setUserProfile(p); saveUserProfileToDB(p); }} onClose={() => setActiveModal(null)} installPrompt={installPrompt} onClearData={() => setConfirmation({ message: "Apagar tudo?", onConfirm: () => { dispatch({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); } })} />}
-      {activeModal === 'about' && <AboutModal userProfile={userProfile} onClose={() => setActiveModal(null)} onShareClick={() => setActiveModal('shareApp')} />}
+      {activeModal === 'save' && <DownloadModal appData={appData} currentDate={currentDate} onClose={() => setActiveModal(null)} />}
+      {activeModal === 'export' && <ShareModal appData={appData} currentDate={currentDate} onClose={() => setActiveModal(null)} isExportMode={true} onImportData={handleImportData} />}
+      {activeModal === 'settings' && <SettingsModal 
+            userProfile={userProfile} 
+            onSaveProfile={saveProfile} 
+            onClose={() => setActiveModal(null)} 
+            installPrompt={installPrompt}
+            onOpenCamera={() => setIsProfileCameraOpen(true)}
+            onClearData={() => setConfirmation({ message: "Isso apagará o banco de dados. Tem certeza?", onConfirm: () => { dispatchWithHistory({ type: 'CLEAR_ALL_DATA' }); setActiveModal(null); } })}
+      />}
+      {activeModal === 'about' && <AboutModal userProfile={userProfile} onClose={() => setActiveModal(null)} onShareClick={() => setActiveModal('shareApp')} onShareDataClick={() => setActiveModal('shareData')} />}
+      {activeModal === 'shareApp' && <ShareModal appData={appData} currentDate={currentDate} isSharingApp onClose={() => setActiveModal(null)} />}
+      {activeModal === 'shareData' && <ShareModal appData={appData} currentDate={currentDate} isSharingData onClose={() => setActiveModal(null)} />}
+      {activeModal === 'notifications' && <NotificationsModal notifications={notifications} onClose={() => {
+          setActiveModal(null);
+          setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      }} />}
+      
+      {isSearchActive && <SearchModal onClose={() => setIsSearchActive(false)} appData={appData} onSelect={(res: any) => { 
+          const [y, m, d] = res.date.split('-'); 
+          setCurrentDate(new Date(y, m-1, d)); 
+          setIsSearchActive(false); 
+      }} onGallery={(item: EquipmentItem) => setGalleryItem(item)} />}
+      
       {confirmation && <ConfirmationModal message={confirmation.message} onConfirm={() => { confirmation.onConfirm(); setConfirmation(null); }} onCancel={() => setConfirmation(null)} />}
+      
+      {duplicateAlert && (
+          <ModalOverlay onClose={duplicateAlert.onCancel}>
+               <div className="text-center">
+                    <div className="w-16 h-16 rounded-full bg-red-100 mx-auto flex items-center justify-center mb-4">
+                        <IconBell className="w-8 h-8 text-red-600" />
+                    </div>
+                    <h3 className="text-xl font-bold text-slate-800 mb-2">Atenção: Duplicidade</h3>
+                    <p className="text-slate-600 mb-4 font-medium">
+                        Este {duplicateAlert.type} <strong>{duplicateAlert.foundValue}</strong> já existe.
+                    </p>
+                    <p className="text-sm text-slate-500 mb-6">Usar novamente?</p>
+                    
+                    <div className="flex gap-3">
+                        <button onClick={duplicateAlert.onCancel} className="flex-1 py-3 rounded-xl bg-red-500 text-white font-bold shadow-lg active:scale-95 transition-all">Não</button>
+                        <button onClick={duplicateAlert.onConfirm} className="flex-1 py-3 rounded-xl bg-green-500 text-white font-bold shadow-lg active:scale-95 transition-all">Sim</button>
+                    </div>
+               </div>
+          </ModalOverlay>
+      )}
+
+      {showAccessDenied && (
+          <AccessDeniedModal onClose={() => setShowAccessDenied(false)} onRequest={handleRequestAlteration} />
+      )}
+
+      {popupNotification && (
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-slate-800/90 backdrop-blur-md text-white px-6 py-4 rounded-xl shadow-2xl z-[80] animate-fade-in flex items-center gap-3">
+              <IconBell className="w-6 h-6 text-yellow-400" />
+              <span className="font-bold">{popupNotification}</span>
+          </div>
+      )}
     </div>
   );
 };
 
-const App = () => (<ErrorBoundary><AppContent /></ErrorBoundary>);
+const App = () => (<ErrorBoundary><AppContent /></ErrorBoundary>)
 export default App;
