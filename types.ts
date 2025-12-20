@@ -10,7 +10,7 @@ export interface EquipmentItem {
 export enum EquipmentCategory {
   BOX = "BOX",
   BOX_SOUND = "BOX SOUND",
-  CONTROLE_REMOTO = "CONTROLE REMOTO",
+  CONTROLE = "CONTROLE", // Reduzido de CONTROLE REMOTO para alinhamento
   CAMERA = "CAMERA",
   CHIP = "CHIP",
 }
@@ -20,7 +20,7 @@ export type DailyData = {
 };
 
 export type AppData = {
-  [date: string]: DailyData; // date format "YYYY-MM-DD"
+  [date: string]: DailyData | undefined; // date format "YYYY-MM-DD"
 };
 
 export interface AppNotification {
@@ -36,5 +36,5 @@ export interface AppNotification {
 export interface UserProfile {
     name: string;
     cpf?: string;
-    photo?: string; // Base64 photo of the user
+    profileImage?: string; // Base64 da imagem de perfil
 }
