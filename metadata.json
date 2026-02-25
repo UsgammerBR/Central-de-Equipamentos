@@ -1,5 +1,5 @@
 {
-  "name": "Controle de Equipamentos",
+  "name": "Stream+ Control",
   "description": "Um aplicativo para rastrear e gerenciar equipamentos diariamente, com salvamento automático, funcionalidade offline e digitalização de QR code.",
   "requestFramePermissions": [
     "camera"

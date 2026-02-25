@@ -1,22 +1,22 @@
 
-import React, { Component, useState, useEffect, useReducer, useRef, useMemo, ReactNode } from 'react';
+import React, { useState, useEffect, useReducer, useRef, useMemo, ReactNode, Component, ErrorInfo } from 'react';
 import { SideMenu } from './components/SideMenu';
+import { CameraModal } from './components/CameraModal';
 import { 
-    CustomMenuIcon, LoadingBoxIcon, IconPlus, IconMinus, IconTrash, IconUndo, IconSearch, IconCamera, IconGallery, IconClipboard, IconX, IconShare, IconChevronLeft, IconChevronRight,
-    IconFileWord, IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconSave, IconStack, IconChevronDown, IconBell, IconQrCode, IconBarcode, IconCameraLens, IconMapPin, IconDownload, IconSettings, IconExport, IconCalendar, IconInfo
+    CustomMenuIcon, LoadingBoxIcon, IconPlus, IconMinus, IconUndo, IconSearch, IconCamera, IconGallery, IconX, IconShare, IconChevronLeft, IconChevronRight,
+    IconFileExcel, IconWhatsapp, IconTelegram, IconEmail, IconStack, IconChevronDown, IconBell, IconCameraLens, IconSettings, IconExport, IconCalendar, IconInfo, IconSun, IconMoon, IconSave, IconDownload,
+    IconBox, IconSpeaker, IconRemote, IconChip, IconTrash, IconCloud, IconCloudOff
 } from './components/icons';
 import { EquipmentCategory, AppData, DailyData, EquipmentItem, AppNotification, UserProfile } from './types';
 import { CATEGORIES, HOLIDAYS_SP } from './constants';
 
-// --- UTILITIES ---
-
 const getFormattedDate = (date: Date): string => {
-  return date.toISOString().split('T')[0];
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
-
-const generateId = () => {
-  return Date.now().toString(36) + Math.random().toString(36).substring(2);
-};
+const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2);
 
 const createEmptyDailyData = (): DailyData => {
   const data = {} as Partial<DailyData>;
@@ -26,35 +26,55 @@ const createEmptyDailyData = (): DailyData => {
   return data as DailyData;
 };
 
-// Christmas Theme Detection (Dec 20th - Dec 25th)
 const isChristmasPeriod = (): boolean => {
   const now = new Date();
-  const month = now.getMonth(); // 11 is December
+  const month = now.getMonth(); 
   const day = now.getDate();
   return month === 11 && day >= 20 && day <= 25;
 };
 
-// --- REDUCER ---
+const generateMonthlyReport = (data: AppData, date: Date) => {
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    let report = `Relatório Mensal - ${date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}\n\n`;
+    
+    CATEGORIES.forEach(cat => {
+        report += `--- ${cat.toUpperCase()} ---\n`;
+        let catEntries = 0;
+        
+        const sortedDates = Object.keys(data).sort();
+        
+        sortedDates.forEach(dateStr => {
+            const d = new Date(dateStr + 'T12:00:00');
+            if (d.getMonth() === month && d.getFullYear() === year) {
+                const dayData = data[dateStr][cat] || [];
+                dayData.filter(isItemActive).forEach(item => {
+                    const time = new Date(item.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    report += `Data: ${d.toLocaleDateString('pt-BR')} | Hora: ${time}\n`;
+                    report += `Contrato: ${item.contract || '-'} | Serial: ${item.serial || '-'}\n`;
+                    report += `----------------------------\n`;
+                    catEntries++;
+                });
+            }
+        });
+        
+        if (catEntries === 0) report += `Nenhum registro.\n`;
+        report += `\n`;
+    });
+    
+    return report;
+};
 
 type Action =
   | { type: 'SET_DATA'; payload: AppData }
-  | { type: 'MERGE_DATA'; payload: AppData }
-  | { type: 'ENSURE_DAY_DATA'; payload: { date: string; dayData: DailyData } }
   | { type: 'ADD_ITEM'; payload: { date: string; category: EquipmentCategory } }
   | { type: 'UPDATE_ITEM'; payload: { date: string; category: EquipmentCategory; item: EquipmentItem } }
-  | { type: 'DELETE_ITEMS'; payload: { date: string; category: EquipmentCategory; itemIds: string[] } }
   | { type: 'DELETE_SINGLE_ITEM'; payload: { date: string; category: EquipmentCategory; itemId: string } }
-  | { type: 'CLEAR_ALL_DATA' };
+  | { type: 'DELETE_MULTIPLE_ITEMS'; payload: { date: string; category: EquipmentCategory; itemIds: string[] } };
 
 const dataReducer = (state: AppData, action: Action): AppData => {
     switch(action.type) {
         case 'SET_DATA': return action.payload;
-        case 'MERGE_DATA': return { ...state, ...action.payload };
-        case 'ENSURE_DAY_DATA': {
-            const { date, dayData } = action.payload;
-            if (state[date]) return state;
-            return { ...state, [date]: dayData };
-        }
         case 'ADD_ITEM': {
             const { date, category } = action.payload;
             const newState = JSON.parse(JSON.stringify(state));
@@ -65,22 +85,12 @@ const dataReducer = (state: AppData, action: Action): AppData => {
         case 'UPDATE_ITEM': {
             const { date, category, item } = action.payload;
             const newState = JSON.parse(JSON.stringify(state));
-            const dayData = newState[date]?.[category];
-            if (!dayData) return state;
+            if (!newState[date]) newState[date] = createEmptyDailyData();
+            const dayData = newState[date][category];
             const itemIndex = dayData.findIndex((i: EquipmentItem) => i.id === item.id);
             if (itemIndex > -1) dayData[itemIndex] = item;
             else dayData.push(item);
-            return newState;
-        }
-        case 'DELETE_ITEMS': {
-            const { date, category, itemIds } = action.payload;
-            const newState = JSON.parse(JSON.stringify(state));
-            const dayData = newState[date]?.[category];
-            if (!dayData) return state;
-            newState[date][category] = dayData.filter((item: EquipmentItem) => !itemIds.includes(item.id));
-            if (newState[date][category].length === 0) {
-                 newState[date][category].push({ id: generateId(), contract: '', serial: '', photos: [], createdAt: Date.now() });
-            }
+
             return newState;
         }
         case 'DELETE_SINGLE_ITEM': {
@@ -94,562 +104,1059 @@ const dataReducer = (state: AppData, action: Action): AppData => {
              }
              return newState;
         }
-        case 'CLEAR_ALL_DATA': return {} as AppData;
+        case 'DELETE_MULTIPLE_ITEMS': {
+            const { date, category, itemIds } = action.payload;
+            if (!itemIds || itemIds.length === 0) return state;
+            const newState = JSON.parse(JSON.stringify(state));
+            if (!newState[date] || !newState[date][category]) return state;
+            
+            newState[date][category] = newState[date][category].filter((item: EquipmentItem) => !itemIds.includes(item.id));
+            
+            if (newState[date][category].length === 0) {
+                newState[date][category].push({ id: generateId(), contract: '', serial: '', photos: [], createdAt: Date.now() });
+            }
+            return newState;
+        }
         default: return state;
     }
 }
 
-const isItemActive = (item: EquipmentItem): boolean => {
-    return (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
-};
+const isItemActive = (item: EquipmentItem): boolean => (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
 
-// --- ERROR BOUNDARY ---
+// Tipagem correta para o ErrorBoundary
+interface ErrorBoundaryProps {
+  children?: ReactNode;
+}
 
-interface ErrorBoundaryProps { children?: ReactNode; }
-interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
 
-// Fixed class component definition to resolve state and props visibility errors by using named Component import and override state property
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  public override state: ErrorBoundaryState = { hasError: false, error: null };
-
-  constructor(props: ErrorBoundaryProps) {
+class ErrorBoundary extends Component<any, any> {
+  state = { hasError: false };
+  props: any;
+  
+  constructor(props: any) {
     super(props);
+    this.props = props;
   }
-  static getDerivedStateFromError(error: Error) { return { hasError: true, error }; }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
   render() {
     if (this.state.hasError) {
-      return <div className="p-8 text-center text-red-600"><h1>Erro inesperado</h1><button onClick={() => window.location.reload()}>Recarregar</button></div>;
+      return (
+        <div className="p-8 text-center text-red-600 bg-slate-950 min-h-screen flex flex-col items-center justify-center">
+          <h1 className="text-2xl font-black mb-4 uppercase tracking-tighter">Erro Crítico</h1>
+          <p className="mb-8 opacity-60 text-xs font-bold uppercase tracking-widest">Ocorreu um erro inesperado</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-8 py-4 bg-red-600 text-white rounded-2xl font-black uppercase tracking-[3px] text-[10px] active:scale-95 transition-all shadow-xl shadow-red-600/20"
+          >
+            Recarregar App
+          </button>
+        </div>
+      );
     }
     return this.props.children;
   }
 }
 
-const LoadingScreen = () => (
-    <div className="fixed inset-0 z-[100] bg-slate-100 flex items-center justify-center flex-col animate-fade-in">
-        <LoadingBoxIcon className="w-64 h-64 drop-shadow-2xl" />
-        <p className="mt-4 text-cyan-600 font-bold animate-pulse tracking-widest text-xs uppercase">Iniciando Controle...</p>
-    </div>
-);
-
-// --- MAIN APP ---
+const getCategoryIcon = (category: EquipmentCategory) => {
+    switch(category) {
+        case EquipmentCategory.BOX: return IconBox;
+        case EquipmentCategory.BOX_SOUND: return IconSpeaker;
+        case EquipmentCategory.CONTROLE: return IconRemote;
+        case EquipmentCategory.CAMERA: return IconCameraLens;
+        case EquipmentCategory.CHIP: return IconChip;
+        default: return IconStack;
+    }
+};
 
 const AppContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [hasNewNotifications, setHasNewNotifications] = useState(false);
+
+  // Carregar notificações do localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('equipment_notifications');
+    if (saved) setNotifications(JSON.parse(saved));
+  }, []);
+
+  // Salvar notificações
+  useEffect(() => {
+    localStorage.setItem('equipment_notifications', JSON.stringify(notifications));
+  }, [notifications]);
+
+  const addNotification = (type: string, details: string) => {
+    const newNotif = {
+        id: Date.now(),
+        time: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        type,
+        details
+    };
+    setNotifications(prev => [newNotif, ...prev].slice(0, 50));
+    setHasNewNotifications(true);
+  };
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appData, dispatch] = useReducer(dataReducer, {} as AppData);
-  const [history, setHistory] = useState<AppData[]>([]);
-  const [isRestoring, setIsRestoring] = useState(false);
-  const [galleryItem, setGalleryItem] = useState<EquipmentItem | null>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile>(() => {
+      const saved = localStorage.getItem('userProfile');
+      return saved ? JSON.parse(saved) : { name: 'Leo Luz', cpf: '', profileImage: '' };
+  });
   const [activeModal, setActiveModal] = useState<string | null>(null);
-  const [historyVisibleCategories, setHistoryVisibleCategories] = useState<EquipmentCategory[]>([]);
-  const [isSearchActive, setIsSearchActive] = useState(false);
-  const [confirmation, setConfirmation] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const [cameraModalItem, setCameraModalItem] = useState<EquipmentItem | null>(null);
-  const [isGlobalDeleteMode, setIsGlobalDeleteMode] = useState(false);
-  const [selectedItems, setSelectedItems] = useState<Record<string, string[]>>({});
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [userProfile, setUserProfile] = useState<UserProfile>({ name: '', cpf: '', profileImage: '' });
-  const [isReadOnly, setIsReadOnly] = useState(false);
-  const [showAccessDenied, setShowAccessDenied] = useState(false);
-  const [popupNotification, setPopupNotification] = useState<string | null>(null);
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [lastChangedCategory, setLastChangedCategory] = useState<string | null>(null);
-  const [holidayTooltip, setHolidayTooltip] = useState<string | null>(null);
+  const [activeCategory, setActiveCategory] = useState<EquipmentCategory>(CATEGORIES[0]);
+  const [cameraTarget, setCameraTarget] = useState<{ category: EquipmentCategory, item: EquipmentItem | 'profile' } | null>(null);
+  const [galleryItem, setGalleryItem] = useState<EquipmentItem | null>(null);
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedForDelete, setSelectedForDelete] = useState<string[]>([]);
+  const [history, setHistory] = useState<AppData[]>([]);
+  const [showAllTimeTotals, setShowAllTimeTotals] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    CATEGORIES.forEach(cat => initial[cat] = true);
+    return initial;
+  });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
   
-  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const isChristmas = isChristmasPeriod();
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const profileFileInputRef = useRef<HTMLInputElement>(null);
   const formattedDate = getFormattedDate(currentDate);
+  
+  const currentHoliday = useMemo(() => {
+    const dayMonth = `${String(currentDate.getDate()).padStart(2, '0')}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    return HOLIDAYS_SP[dayMonth];
+  }, [currentDate]);
 
   useEffect(() => {
-      const timer = setTimeout(() => setIsLoading(false), 2000);
-      const savedData = localStorage.getItem('equipmentData');
-      if (savedData) dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
-      const savedProfile = localStorage.getItem('userProfile');
-      if (savedProfile) setUserProfile(JSON.parse(savedProfile));
-      
-      window.addEventListener('beforeinstallprompt', (e) => {
-          e.preventDefault();
-          setInstallPrompt(e);
-      });
-      return () => clearTimeout(timer);
+    const timer = setTimeout(() => setIsLoading(false), 2000);
+    
+    // Load local data first
+    const savedData = localStorage.getItem('equipmentData');
+    if (savedData) dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
+    
+    // Then try to fetch from server
+    const fetchServerData = async () => {
+        try {
+            const response = await fetch('/api/data');
+            if (response.ok) {
+                const serverData = await response.json();
+                if (Object.keys(serverData).length > 0) {
+                    dispatch({ type: 'SET_DATA', payload: serverData });
+                    localStorage.setItem('equipmentData', JSON.stringify(serverData));
+                }
+            }
+        } catch (err) {
+            console.error("Failed to fetch from server", err);
+            setSyncStatus('offline');
+        }
+    };
+    
+    fetchServerData();
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Sync with server whenever appData changes
+  useEffect(() => {
+    if (isLoading) return;
+    
+    localStorage.setItem('equipmentData', JSON.stringify(appData));
+    
+    const syncWithServer = async () => {
+        if (!navigator.onLine) {
+            setSyncStatus('offline');
+            return;
+        }
+        
+        setSyncStatus('syncing');
+        try {
+            const response = await fetch('/api/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(appData)
+            });
+            
+            if (response.ok) {
+                setSyncStatus('synced');
+            } else {
+                setSyncStatus('error');
+            }
+        } catch (err) {
+            setSyncStatus('error');
+        }
+    };
+
+    const debounceTimer = setTimeout(syncWithServer, 2000);
+    return () => clearTimeout(debounceTimer);
+  }, [appData, isLoading]);
+
+  useEffect(() => {
+    const handleOnline = () => setSyncStatus('synced');
+    const handleOffline = () => setSyncStatus('offline');
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+    };
   }, []);
 
   useEffect(() => {
-    if (!appData[formattedDate] && !isLoading) {
-      dispatch({ type: 'ENSURE_DAY_DATA', payload: { date: formattedDate, dayData: createEmptyDailyData() } });
+    localStorage.setItem('userProfile', JSON.stringify(userProfile));
+  }, [userProfile]);
+
+  const currentDayData = useMemo(() => appData[formattedDate] || createEmptyDailyData(), [appData, formattedDate]);
+
+  const handleUndo = () => {
+    if (deleteMode) {
+        setDeleteMode(false);
+        setSelectedForDelete([]);
+        return;
     }
-  }, [appData, formattedDate, isLoading]);
-
-  useEffect(() => {
-    if (!isRestoring && !isReadOnly && !isLoading) localStorage.setItem('equipmentData', JSON.stringify(appData));
-  }, [appData, isRestoring, isReadOnly, isLoading]);
-
-  useEffect(() => {
-    localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
-    if (isDarkMode) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-  }, [isDarkMode]);
-
-  const addNotification = (type: any, message: string) => {
-    const newNotif: AppNotification = { id: generateId(), type, message, timestamp: Date.now(), read: false };
-    setNotifications(prev => [newNotif, ...prev]);
-  };
-
-  const currentDayData: DailyData = useMemo(() => {
-    const day = appData[formattedDate];
-    if (day && CATEGORIES.every(cat => Array.isArray(day[cat]))) {
-        return day as DailyData;
+    if (history.length > 0) {
+        const lastState = history[history.length - 1];
+        dispatch({ type: 'SET_DATA', payload: lastState });
+        setHistory(prev => prev.slice(0, -1));
     }
-    return createEmptyDailyData();
-  }, [appData, formattedDate]);
-
-  const handleUpdateItem = (category: EquipmentCategory, item: EquipmentItem) => {
-      if (isReadOnly) { setShowAccessDenied(true); return; }
-      setLastChangedCategory(category);
-      dispatch({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category, item } });
-      setTimeout(() => setLastChangedCategory(null), 1000);
   };
 
-  const saveProfile = (profile: UserProfile) => {
-      setUserProfile(profile);
-      localStorage.setItem('userProfile', JSON.stringify(profile));
+  const addToHistory = (state: AppData) => {
+    setHistory(prev => [...prev.slice(-19), JSON.parse(JSON.stringify(state))]);
   };
 
-  const getTodayHoliday = () => {
-      const key = `${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
-      return HOLIDAYS_SP[key];
+  const handleAddItem = () => {
+    addToHistory(appData);
+    dispatch({ type: 'ADD_ITEM', payload: { date: formattedDate, category: activeCategory } });
+    // Não expande mais automaticamente ao adicionar, para permitir que o item "suma" se estiver colapsado
+    addNotification('Adição', `Novo item em ${activeCategory}`);
   };
 
-  const todayHoliday = getTodayHoliday();
+  const handleDeleteSelected = () => {
+    if (selectedForDelete.length > 0) {
+        addToHistory(appData);
+        dispatch({ type: 'DELETE_MULTIPLE_ITEMS', payload: { date: formattedDate, category: activeCategory, itemIds: selectedForDelete } });
+        addNotification('Exclusão', `${selectedForDelete.length} itens removidos de ${activeCategory}`);
+        setSelectedForDelete([]);
+        setDeleteMode(false);
+    }
+  };
 
-  if (isLoading) return <LoadingScreen />;
+  const somaTotalGeral = useMemo(() => {
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    
+    return Object.entries(appData).reduce((acc: number, [dateStr, day]) => {
+        if (!day) return acc;
+        const d = new Date(dateStr + 'T12:00:00');
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            const dayTotal = Object.values(day).flat().filter(isItemActive).length;
+            return acc + dayTotal;
+        }
+        return acc;
+    }, 0);
+  }, [appData, currentDate]);
 
-  // Dynamic Theme Colors
-  const themeClass = isChristmas 
-    ? 'bg-red-900/5 text-white ChristmasMode' 
-    : isDarkMode 
-      ? 'bg-slate-900 text-slate-100' 
-      : 'bg-slate-100 text-slate-800';
+  const categoryTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    CATEGORIES.forEach(cat => {
+        let count = 0;
+        Object.values(appData).forEach(day => {
+            if (day && day[cat]) {
+                count += day[cat].filter(isItemActive).length;
+            }
+        });
+        totals[cat] = count;
+    });
+    return totals;
+  }, [appData]);
 
-  const headerTheme = isChristmas 
-    ? 'bg-red-800/80 border-gold-400/20' 
-    : isDarkMode 
-      ? 'bg-slate-900/80 border-white/5' 
-      : 'bg-white/70 border-white/40';
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const results: { date: string; category: EquipmentCategory; item: EquipmentItem }[] = [];
+    Object.entries(appData).forEach(([date, dayData]) => {
+      if (!dayData) return;
+      Object.entries(dayData).forEach(([category, items]) => {
+        items.forEach(item => {
+          if (
+            item.contract.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            item.serial.toLowerCase().includes(searchQuery.toLowerCase())
+          ) {
+            results.push({ date, category: category as EquipmentCategory, item });
+          }
+        });
+      });
+    });
+    return results.sort((a, b) => b.item.createdAt! - a.item.createdAt!);
+  }, [appData, searchQuery]);
 
-  const accentColor = isChristmas ? 'text-amber-400' : 'text-cyan-600';
+  const handleCameraCapture = (data: string, type: 'qr' | 'photo') => {
+    if (!cameraTarget) return;
+
+    if (cameraTarget.item === 'profile') {
+        setUserProfile(prev => ({ ...prev, profileImage: data }));
+    } else {
+        const item = cameraTarget.item as EquipmentItem;
+        if (type === 'qr') {
+            if ('vibrate' in navigator) navigator.vibrate(100);
+            dispatch({ 
+                type: 'UPDATE_ITEM', 
+                payload: { 
+                    date: formattedDate, 
+                    category: cameraTarget.category, 
+                    item: { ...item, serial: data } 
+                } 
+            });
+        } else {
+            dispatch({ 
+                type: 'UPDATE_ITEM', 
+                payload: { 
+                    date: formattedDate, 
+                    category: cameraTarget.category, 
+                    item: { ...item, photos: [...item.photos, data] } 
+                } 
+            });
+        }
+    }
+    setCameraTarget(null);
+  };
+
+  if (isLoading) return <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-50 z-[100]"><LoadingBoxIcon/><p className="mt-4 font-black uppercase tracking-widest text-[10px] text-slate-400 animate-pulse">Iniciando Controle...</p></div>;
 
   return (
-    <div className={`min-h-screen ${themeClass} font-sans pb-32 select-none overflow-x-hidden transition-all duration-500`}>
-       <SideMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} onMenuClick={setActiveModal} userProfile={userProfile} />
+    <div className="flex flex-col min-h-screen relative w-full overflow-x-hidden bg-slate-50">
       
-      <header className={`sticky top-0 z-30 ${headerTheme} backdrop-blur-xl py-4 px-4 shadow-sm border-b flex flex-col gap-2 transition-all`}>
-        <div className="flex items-center justify-between w-full">
-            <div className="flex-shrink-0 z-20">
-                <div className="active:scale-95 transition-all cursor-pointer drop-shadow-lg" onClick={() => setIsMenuOpen(true)}>
-                     {userProfile.profileImage ? (
-                         <div className="w-24 h-24 rounded-full border-4 border-white overflow-hidden shadow-2xl transition-all hover:scale-110">
-                             <img src={userProfile.profileImage} className="w-full h-full object-cover" />
-                         </div>
-                     ) : <CustomMenuIcon className="w-24 h-24" />}
-                </div>
-            </div>
+      <div className="fixed inset-0 pointer-events-none opacity-40">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-slate-50"></div>
+      </div>
 
-            <div className="flex items-center gap-3 z-20">
-                <ActionButton isDark={isDarkMode} isChristmas={isChristmas} onClick={() => { if(isReadOnly) setShowAccessDenied(true); else CATEGORIES.forEach(cat => dispatch({ type: 'ADD_ITEM', payload: { date: formattedDate, category: cat } })); }}><IconPlus className="w-6 h-6" /></ActionButton>
-                <ActionButton isDark={isDarkMode} isChristmas={isChristmas} onClick={() => setIsGlobalDeleteMode(!isGlobalDeleteMode)} isDanger={isGlobalDeleteMode}><IconMinus className="w-6 h-6" /></ActionButton>
-                <ActionButton isDark={isDarkMode} isChristmas={isChristmas} onClick={() => { if(isReadOnly) setShowAccessDenied(true); else if(history.length > 0) dispatch({ type: 'SET_DATA', payload: history[0] }); }}><IconUndo className="w-6 h-6" /></ActionButton>
-                <ActionButton isDark={isDarkMode} isChristmas={isChristmas} onClick={() => setIsSearchActive(true)}><IconSearch className="w-6 h-6" /></ActionButton>
-                <div className="relative"><ActionButton isDark={isDarkMode} isChristmas={isChristmas} onClick={() => setActiveModal('notifications')}><IconBell className="w-6 h-6" /></ActionButton></div>
-            </div>
-        </div>
+      <SideMenu 
+        isOpen={isMenuOpen} 
+        onClose={() => setIsMenuOpen(false)} 
+        onMenuClick={setActiveModal} 
+        userProfile={userProfile} 
+        isChristmas={isChristmas} 
+        syncStatus={syncStatus}
+      />
 
-        <div className="flex flex-col items-center justify-center w-full animate-fade-in pb-1 relative">
-            <div className="flex items-center gap-2">
-                <button onClick={() => setActiveModal('calendar')} className={`inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-full ${isChristmas ? 'bg-white/20 border-white/30' : isDarkMode ? 'bg-white/10 border-white/5' : 'bg-white/70 border-white/50'} backdrop-blur-md shadow-sm active:scale-95 transition-all hover:scale-105`}>
-                    <span className={`text-base font-extrabold ${isChristmas ? 'text-white' : isDarkMode ? 'text-cyan-400' : 'text-cyan-800'}`}>
-                        {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </span>
-                    <IconChevronDown className={`w-4 h-4 ${isChristmas ? 'text-white' : 'text-cyan-600'}`}/>
-                </button>
-                {(todayHoliday || isChristmas) && (
-                    <button onClick={() => setHolidayTooltip(isChristmas ? "Período de Natal" : todayHoliday!.name)} className={`w-12 h-12 flex items-center justify-center ${isChristmas ? 'bg-white/20' : isDarkMode ? 'bg-white/10' : 'bg-white/80'} rounded-full text-2xl shadow-xl animate-bounce hover:scale-110 transition-all`}>
-                        {isChristmas ? '🎅' : todayHoliday!.icon}
-                    </button>
-                )}
-            </div>
-            {holidayTooltip && (
-                <div className={`absolute top-14 ${isChristmas ? 'bg-red-800' : 'bg-slate-900/95'} text-white p-5 rounded-3xl text-xs z-50 shadow-2xl animate-pop-in border border-white/10 backdrop-blur-md`} onClick={() => setHolidayTooltip(null)}>
-                    <div className="flex items-center gap-4 mb-2">
-                        <span className="text-3xl">{isChristmas ? '🎄' : todayHoliday?.icon}</span>
-                        <div className="font-black text-base tracking-tighter uppercase">{holidayTooltip}</div>
+      {isChristmas && (
+          <div className="fixed top-0 left-0 right-0 h-48 pointer-events-none z-[60] overflow-hidden">
+                <div className="absolute left-0 top-14 animate-[santaRide_24s_linear_infinite] flex items-center">
+                    <div className="relative flex items-end">
+                        <span className="text-8xl drop-shadow-[0_10px_20px_rgba(0,0,0,1)]" style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>🛷</span>
+                        <span className="absolute bottom-6 left-10 text-6xl drop-shadow-lg" style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>🎅</span>
+                        <div className="absolute bottom-8 left-18 flex items-baseline gap-0.5">
+                            <span className="text-3xl drop-shadow-md">🎁</span>
+                            <span className="text-2xl drop-shadow-md">📦</span>
+                            <span className="text-2xl drop-shadow-md">🎁</span>
+                        </div>
+                        <svg className="absolute top-0 left-24 w-80 h-20 pointer-events-none overflow-visible">
+                            <path d="M 0,14 Q 40,8 80,12" fill="none" stroke="#fcd34d" strokeWidth="1" strokeOpacity="0.4" />
+                            <path d="M 0,17 Q 40,11 80,15" fill="none" stroke="#fcd34d" strokeWidth="1" strokeOpacity="0.4" />
+                        </svg>
                     </div>
-                    <div className="opacity-50 text-[10px] font-bold uppercase tracking-[3px] text-center">Toque para fechar</div>
-                </div>
-            )}
-        </div>
-      </header>
-
-      <main className="container mx-auto p-4 space-y-4 mt-2">
-        {CATEGORIES.map(category => (
-            <EquipmentSection 
-                key={`${formattedDate}-${category}`} 
-                category={category} 
-                allCategoryItems={currentDayData[category] || []}
-                onUpdateItem={(item: EquipmentItem) => handleUpdateItem(category, item)}
-                onViewGallery={setGalleryItem}
-                isDeleteMode={isGlobalDeleteMode}
-                selectedItems={selectedItems[category] || []}
-                onToggleSelect={(id: string) => setSelectedItems(prev => ({ ...prev, [category]: prev[category]?.includes(id) ? prev[category].filter(i => i !== id) : [...(prev[category]||[]), id] }))}
-                isHistoryVisible={historyVisibleCategories.includes(category)}
-                onToggleHistory={() => setHistoryVisibleCategories(prev => prev.includes(category) ? prev.filter(c => c !== category) : [...prev, category])}
-                onOpenCamera={(item: EquipmentItem) => { if(isReadOnly) setShowAccessDenied(true); else setCameraModalItem(item); }}
-                isReadOnly={isReadOnly}
-                isPulsing={lastChangedCategory === category}
-                isDark={isDarkMode}
-                isChristmas={isChristmas}
-            />
-        ))}
-      </main>
-
-      <SummaryFooter data={currentDayData} allData={appData} currentDate={formattedDate} isDark={isDarkMode} isChristmas={isChristmas} />
-            
-      {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} />}
-      
-      {activeModal === 'calendar' && <CalendarModal currentDate={currentDate} onClose={() => setActiveModal(null)} onDateSelect={(d: Date) => { setCurrentDate(d); setActiveModal(null); }} isDark={isDarkMode} isChristmas={isChristmas}/>}
-      
-      {activeModal === 'settings' && (
-          <ModalOverlay onClose={() => setActiveModal(null)} isDark={isDarkMode} isChristmas={isChristmas}>
-              <h2 className={`text-xl font-black mb-6 flex items-center gap-2 uppercase tracking-tighter ${isChristmas ? 'text-white' : 'text-cyan-500'}`}><IconSettings className="w-6 h-6"/> Configurações</h2>
-              <div className="space-y-6">
-                  <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Nome Completo</label>
-                      <input type="text" value={userProfile.name} onChange={(e) => setUserProfile({...userProfile, name: e.target.value})} placeholder="Seu Nome" className={`w-full ${isDarkMode ? 'bg-slate-800 text-white' : 'bg-slate-50 text-slate-800'} rounded-2xl p-4 outline-none border focus:border-cyan-500 transition-colors font-bold`}/>
-                  </div>
-                  
-                  <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Perfil e Mídia</label>
-                      <div className="flex gap-2">
-                        <button onClick={() => setCameraModalItem({ id: 'PROFILE', photos: [], contract: '', serial: '' })} className={`flex-1 aspect-square ${isChristmas ? 'bg-green-700' : isDarkMode ? 'bg-slate-700' : 'bg-slate-800'} text-white rounded-2xl font-black text-[9px] uppercase tracking-widest flex flex-col items-center justify-center gap-2 active:scale-95 shadow-xl transition-all`}>
-                            <IconCamera className="w-8 h-8"/> <span>Foto</span>
-                        </button>
-                        <button onClick={() => profileFileInputRef.current?.click()} className={`flex-1 aspect-square ${isChristmas ? 'bg-white border-gold-400/30' : isDarkMode ? 'bg-slate-800 border-white/5' : 'bg-white border-slate-100'} border-4 rounded-2xl font-black text-[9px] uppercase tracking-widest flex flex-col items-center justify-center gap-2 active:scale-95 shadow-lg transition-all`}>
-                            <IconGallery className={`w-8 h-8 ${isChristmas ? 'text-red-600' : 'text-cyan-600'}`}/> <span className={isDarkMode ? 'text-slate-300' : 'text-slate-600'}>Galeria</span>
-                        </button>
-                      </div>
-                      <input type="file" ref={profileFileInputRef} className="hidden" accept="image/*" onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if(file) {
-                              const r = new FileReader();
-                              r.onload = (ev) => setUserProfile({...userProfile, profileImage: ev.target?.result as string});
-                              r.readAsDataURL(file);
-                          }
-                      }} />
-                  </div>
-
-                  <div className="pt-1">
-                    <button onClick={() => setConfirmation({ message: "Restaurar ícone padrão?", onConfirm: () => { setUserProfile({...userProfile, profileImage: undefined}); addNotification('info', 'Ícone restaurado.'); } })} className={`w-full py-3.5 ${isDarkMode ? 'bg-red-900/10 text-red-400' : 'bg-red-50 text-red-500'} rounded-2xl font-black text-[9px] uppercase tracking-[4px] border border-red-500/10 active:scale-95 transition-all shadow-sm`}>
-                        Restaurar Ícone Padrão
-                    </button>
-                  </div>
-
-                  <div className={`h-px ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`}></div>
-
-                  {/* CUSTOM THEME SWITCH */}
-                  <div className="flex flex-col gap-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-1">Alterar Tema</label>
-                    <div className={`w-full p-2 ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'} rounded-[2rem] flex items-center justify-between shadow-inner`}>
-                        <button onClick={() => setIsDarkMode(false)} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[1.5rem] transition-all duration-300 ${!isDarkMode ? 'bg-white shadow-xl scale-[1.05] text-amber-500' : 'text-slate-500 opacity-40'}`}>
-                            <div className={`w-2 h-2 rounded-full ${!isDarkMode ? 'bg-amber-400 animate-pulse shadow-[0_0_8px_#fbbf24]' : 'bg-slate-600'}`}></div>
-                            <span className="text-[11px] font-black uppercase tracking-widest">Dia</span>
-                            <span>☀️</span>
-                        </button>
-                        <button onClick={() => setIsDarkMode(true)} className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-[1.5rem] transition-all duration-300 ${isDarkMode ? 'bg-slate-900 shadow-xl scale-[1.05] text-indigo-400' : 'text-slate-500 opacity-40'}`}>
-                            <span>🌙</span>
-                            <span className="text-[11px] font-black uppercase tracking-widest">Noite</span>
-                            <div className={`w-2 h-2 rounded-full ${isDarkMode ? 'bg-indigo-400 animate-pulse shadow-[0_0_8px_#818cf8]' : 'bg-slate-600'}`}></div>
-                        </button>
+                    <div className="flex -space-x-5 items-center ml-14">
+                        <span className="text-5xl drop-shadow-2xl" style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>🦌</span>
+                        <span className="text-5xl drop-shadow-2xl" style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>🦌</span>
+                        <span className="text-5xl drop-shadow-2xl" style={{ transform: 'scaleX(-1)', display: 'inline-block' }}>🦌</span>
                     </div>
-                  </div>
-
-                  <button onClick={() => { saveProfile(userProfile); setActiveModal(null); addNotification('success', 'Perfil salvo!'); }} className={`w-full py-5 ${isChristmas ? 'bg-green-600' : 'bg-emerald-500'} text-white rounded-[2rem] font-black shadow-2xl active:scale-95 transition-all mt-2 uppercase tracking-[5px] text-xs`}>Salvar Tudo</button>
-              </div>
-          </ModalOverlay>
-      )}
-      
-      {activeModal === 'about' && (
-        <ModalOverlay onClose={() => setActiveModal(null)} isDark={isDarkMode} isChristmas={isChristmas}>
-            <div className="text-center flex flex-col items-center">
-                <div className="mb-4 transform transition-transform hover:scale-110">
-                    {userProfile.profileImage ? (
-                        <img src={userProfile.profileImage} className="w-32 h-32 rounded-full border-4 border-white shadow-2xl object-cover" />
-                    ) : <CustomMenuIcon className="w-32 h-32 drop-shadow-2xl" />}
                 </div>
-                
-                <div className="mb-8">
-                    <p className={`font-black text-2xl uppercase tracking-tighter ${isChristmas ? 'text-amber-400' : isDarkMode ? 'text-slate-100' : 'text-slate-900'}`}>Dono: Leo Luz</p>
-                    {userProfile.name && <p className="text-[10px] text-slate-500 uppercase font-black tracking-[4px] mt-1">{userProfile.name}</p>}
-                </div>
-
-                <div className="w-full space-y-4 mb-10">
-                    <button onClick={() => setActiveModal('shareApp')} className={`w-full p-5 ${isChristmas ? 'bg-red-700' : isDarkMode ? 'bg-slate-800' : 'bg-slate-900'} text-white rounded-[2rem] font-black text-[11px] uppercase tracking-[4px] flex items-center justify-center gap-3 active:scale-95 shadow-2xl transition-all`}>
-                        <IconShare className="w-6 h-6 text-cyan-400"/> Compartilhar App
-                    </button>
-                    <button onClick={() => setActiveModal('export')} className={`w-full p-5 ${isDarkMode ? 'bg-slate-700/50 text-slate-100' : 'bg-white border-2 border-slate-100 text-slate-700'} rounded-[2rem] font-black text-[11px] uppercase tracking-[4px] flex items-center justify-center gap-3 active:scale-95 shadow-sm transition-all`}>
-                        <IconStack className="w-6 h-6 text-cyan-600"/> Compartilhar Dados
-                    </button>
-                </div>
-
-                <div className="py-2 mb-6">
-                    <h2 className={`text-3xl font-black tracking-tighter ${isChristmas ? 'text-amber-400' : isDarkMode ? 'text-cyan-500' : 'text-slate-900'}`}>Controle</h2>
-                    <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-[8px] font-black">V 1.0.1</p>
-                </div>
-
-                <div className="mt-4 mb-8">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[6px] font-black leading-relaxed opacity-50">
-                        Desenvolvido para<br/>controle de equipamentos
-                    </p>
-                </div>
-
-                <button onClick={() => setActiveModal(null)} className={`w-full py-5 rounded-[2rem] ${isDarkMode ? 'bg-slate-800 text-slate-500' : 'bg-slate-50 text-slate-400'} font-black active:scale-95 transition-all text-xs uppercase tracking-widest`}>Fechar</button>
-            </div>
-        </Overlay>
-      )}
-
-      {/* SHARE OPTIONS MODAL */}
-      {(activeModal === 'shareApp' || activeModal === 'shareData') && (
-          <ModalOverlay onClose={() => setActiveModal('about')} isDark={isDarkMode} isChristmas={isChristmas}>
-              <h3 className="text-center font-black uppercase text-xs tracking-[5px] mb-8 text-slate-400">Enviar via</h3>
-              <div className="grid grid-cols-1 gap-4">
-                  <a href={`https://wa.me/?text=Confira o App Controle de Equipamentos!`} target="_blank" className={`flex items-center gap-5 p-5 ${isDarkMode ? 'bg-emerald-900/20 text-emerald-400' : 'bg-emerald-50 text-emerald-700'} rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all border ${isDarkMode ? 'border-emerald-800/30' : 'border-emerald-100'} shadow-lg`}>
-                      <IconWhatsapp className="w-8 h-8"/> WhatsApp
-                  </a>
-                  <a href={`https://t.me/share/url?url=${window.location.href}&text=App Controle`} target="_blank" className={`flex items-center gap-5 p-5 ${isDarkMode ? 'bg-sky-900/20 text-sky-400' : 'bg-sky-50 text-sky-700'} rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all border ${isDarkMode ? 'border-sky-800/30' : 'border-sky-100'} shadow-lg`}>
-                      <IconTelegram className="w-8 h-8"/> Telegram
-                  </a>
-                  <a href={`mailto:?subject=App Controle&body=Link: ${window.location.href}`} className={`flex items-center gap-5 p-5 ${isDarkMode ? 'bg-slate-800 text-slate-300' : 'bg-slate-100 text-slate-700'} rounded-[2rem] font-black uppercase text-[10px] tracking-widest active:scale-95 transition-all border border-transparent shadow-lg`}>
-                      <IconEmail className="w-8 h-8"/> Email
-                  </a>
-              </div>
-              <button onClick={() => setActiveModal('about')} className="w-full mt-8 py-3 text-slate-500 font-black uppercase text-[10px] tracking-[5px]">Voltar</button>
-          </ModalOverlay>
-      )}
-
-      {cameraModalItem && (
-          <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-6">
-              <button onClick={() => setCameraModalItem(null)} className="absolute top-4 right-4 text-white p-3"><IconX className="w-10 h-10"/></button>
-              <div className="text-white text-2xl font-black mb-12 tracking-[15px] uppercase">CÂMERA</div>
-              <div className="w-full aspect-square max-w-sm rounded-[3rem] border-8 border-dashed border-white/10 flex items-center justify-center mb-16 overflow-hidden bg-slate-900 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
-                  <IconCameraLens className="w-24 h-24 text-white/5" />
-              </div>
-              <button onClick={() => {
-                  const fakeImg = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
-                  if(cameraModalItem.id === 'PROFILE') saveProfile({...userProfile, profileImage: fakeImg});
-                  else handleUpdateItem(Object.keys(currentDayData).find(k => currentDayData[k as any]?.some((i: any) => i.id === cameraModalItem.id)) as any, { ...cameraModalItem, photos: [...cameraModalItem.photos, fakeImg] });
-                  setCameraModalItem(null);
-              }} className="w-24 h-24 bg-white rounded-full border-[10px] border-slate-300 shadow-[0_0_40px_rgba(255,255,255,0.3)] active:scale-90 transition-transform"></button>
           </div>
       )}
 
-      {confirmation && <ConfirmationModal message={confirmation.message} onConfirm={() => { confirmation.onConfirm(); setConfirmation(null); }} onCancel={() => setConfirmation(null)} isDark={isDarkMode} isChristmas={isChristmas} />}
-    </div>
-  );
-};
-
-// --- COMPONENTES AUXILIARES ---
-
-const ActionButton = ({ children, onClick, isDanger, disabled, isDark, isChristmas }: any) => (
-    <button onClick={onClick} disabled={disabled} className={`w-12 h-12 rounded-full flex items-center justify-center transition-all active:scale-90 shadow-xl border ${isDanger ? 'bg-red-500 text-white border-red-400' : isChristmas ? 'bg-green-700 text-white border-white/20' : isDark ? 'bg-slate-800 text-cyan-400 border-white/5' : 'bg-white text-cyan-700 border-cyan-100 hover:scale-110'}`}>{children}</button>
-);
-
-const EquipmentSection = ({ category, allCategoryItems, onUpdateItem, onViewGallery, isDeleteMode, selectedItems, onToggleSelect, isHistoryVisible, onToggleHistory, onOpenCamera, isReadOnly, isPulsing, isDark, isChristmas }: any) => {
-    const itemsToDisplay = isHistoryVisible ? allCategoryItems : allCategoryItems.slice(-1);
-    const activeCount = allCategoryItems.filter(isItemActive).length;
-    
-    const headerBg = isHistoryVisible 
-      ? isChristmas ? 'bg-red-700 shadow-red-900/40' : 'bg-indigo-600 shadow-indigo-900/30' 
-      : isChristmas ? 'bg-white/10 border-white/20' : isDark ? 'bg-slate-800 border-white/5' : 'bg-white border-white/40';
-
-    return (
-        <div className="relative group">
-             <div onClick={onToggleHistory} className={`w-full p-5 rounded-[1.8rem] flex items-center justify-between transition-all duration-500 shadow-lg border ${headerBg} ${isHistoryVisible ? 'text-white scale-[1.02]' : isDark ? 'text-slate-300' : 'text-slate-700'}`}>
-                <div className="flex items-center gap-4">
-                    <span className="font-black text-[11px] uppercase tracking-[3px]">{category}</span>
-                    <span className={`px-4 py-1.5 rounded-full text-[11px] font-black transition-all ${isPulsing ? 'bg-emerald-500 text-white animate-pulse shadow-[0_0_15px_rgba(16,185,129,0.6)]' : isChristmas ? 'bg-amber-400 text-red-900' : isDark ? 'bg-emerald-900/50 text-emerald-400' : 'bg-emerald-100 text-emerald-800'}`}>
-                        {activeCount}
-                    </span>
-                </div>
-                {isHistoryVisible ? <IconChevronDown className="w-5 h-5 opacity-60"/> : <IconChevronRight className="w-5 h-5 opacity-40 group-hover:translate-x-1 transition-transform"/>}
-            </div>
-            <div className="mt-3 grid gap-3 animate-slide-in-up">
-                {itemsToDisplay.map((item: EquipmentItem) => (
-                    <div key={item.id} className={`relative p-3 ${isChristmas ? 'bg-white/10 border-white/20' : isDark ? 'bg-slate-800/40 border-white/5' : 'bg-white/50 border-white/40'} backdrop-blur-md rounded-[1.8rem] shadow-sm flex items-center border ${isDeleteMode ? 'pl-12' : ''} transition-all`}>
-                        {isDeleteMode && <div className="absolute left-4"><input type="checkbox" checked={selectedItems.includes(item.id)} onChange={() => onToggleSelect(item.id)} className="w-6 h-6 rounded-lg text-cyan-600" /></div>}
-                        <div className="flex items-center gap-2 w-full">
-                            <input type="number" placeholder="CONTRATO" value={item.contract} readOnly={isReadOnly} onChange={(e) => onUpdateItem({ ...item, contract: e.target.value })} className={`w-24 ${isDark || isChristmas ? 'bg-black/20 text-white' : 'bg-white/80 text-slate-800'} rounded-xl py-3 text-[11px] font-black border-none outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-inner`} />
-                            <input type="text" placeholder="SERIAL" value={item.serial} readOnly={isReadOnly} onChange={(e) => onUpdateItem({ ...item, serial: e.target.value })} className={`flex-1 ${isDark || isChristmas ? 'bg-black/20 text-white' : 'bg-white/80 text-slate-800'} rounded-xl py-3 text-[11px] font-black border-none outline-none focus:ring-2 focus:ring-cyan-500/50 transition-all shadow-inner`} />
-                            <div className="flex gap-2">
-                                <button onClick={() => onOpenCamera(item)} className={`aspect-square w-11 h-11 flex items-center justify-center rounded-xl active:scale-95 transition-all shadow-md ${isChristmas ? 'bg-amber-400 text-red-900' : isDark ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-white text-cyan-600 border border-slate-100'}`}>
-                                    <IconCameraLens className="w-5 h-5" />
-                                </button>
-                                <button onClick={() => onViewGallery(item)} className={`aspect-square w-11 h-11 flex items-center justify-center rounded-xl active:scale-95 transition-all shadow-md ${item.photos.length > 0 ? (isChristmas ? 'bg-green-600 shadow-green-900/30' : 'bg-indigo-600 shadow-indigo-900/30') + ' text-white scale-110' : isDark || isChristmas ? 'bg-black/20 text-white/20' : 'bg-slate-50 text-slate-300 border border-slate-100'}`}>
-                                    <IconGallery className="w-5 h-5" />
-                                </button>
-                            </div>
+      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200 px-4 pt-12 pb-4">
+        <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+                <div onClick={() => setIsMenuOpen(true)} className="active:scale-95 transition-all cursor-pointer">
+                    {userProfile.profileImage ? (
+                        <div className="w-12 h-12 rounded-full border-2 border-slate-200 overflow-hidden shadow-sm">
+                            <img src={userProfile.profileImage} className="w-full h-full object-cover" />
                         </div>
-                    </div>
-                ))}
+                    ) : (
+                        <CustomMenuIcon className="w-12 h-12 drop-shadow-md" isChristmas={isChristmas}/>
+                    )}
+                </div>
+                <div className="flex flex-col">
+                    <h1 className="text-sm font-black text-slate-900 uppercase tracking-tighter">Controle</h1>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[3px]">Equipamentos</span>
+                </div>
+            </div>
+            
+            <div className="flex gap-1 items-center">
+                <button 
+                    onClick={handleAddItem} 
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-95 shadow-sm transition-all"
+                >
+                    <IconPlus className="w-3.5 h-3.5"/>
+                </button>
+                <button 
+                    onClick={() => {
+                        if (deleteMode) {
+                            if (selectedForDelete.length > 0) {
+                                handleDeleteSelected();
+                            } else {
+                                setDeleteMode(false);
+                                setSelectedForDelete([]);
+                            }
+                        } else {
+                            setDeleteMode(true);
+                        }
+                    }} 
+                    className={`w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 shadow-sm transition-all ${deleteMode ? 'bg-red-500 text-white border-red-400' : 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                >
+                    {deleteMode && selectedForDelete.length > 0 ? <IconTrash className="w-3.5 h-3.5"/> : <IconMinus className="w-3.5 h-3.5"/>}
+                </button>
+                <button 
+                    onClick={handleUndo} 
+                    disabled={!deleteMode && history.length === 0}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-sm transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
+                >
+                    <IconUndo className="w-3.5 h-3.5"/>
+                </button>
+                <button onClick={() => setActiveModal('search')} className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-sm transition-all">
+                    <IconSearch className="w-3.5 h-3.5"/>
+                </button>
+                <button 
+                    onClick={() => {
+                        setActiveModal('notifications');
+                        setHasNewNotifications(false);
+                    }}
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-sm transition-all relative"
+                >
+                    <IconBell className="w-3.5 h-3.5"/>
+                    {hasNewNotifications && (
+                        <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
+                    )}
+                </button>
             </div>
         </div>
-    );
-};
 
-const SummaryFooter = ({ data, allData, currentDate, isDark, isChristmas }: any) => {
-    const categoryCounts: Record<string, number> = {};
-    CATEGORIES.forEach(cat => { categoryCounts[cat] = (data[cat] || []).filter(isItemActive).length; });
-    const totalToday = Object.values(categoryCounts).reduce((a, b) => a + b, 0);
-    const [year, month] = currentDate.split('-');
-    const monthlyTotal = Object.entries(allData).reduce((sum: number, [date, dayData]: [string, any]) => {
-        if (dayData && date && date.startsWith(`${year}-${month}`)) {
-            return sum + Object.values(dayData).flat().filter((i: any) => isItemActive(i)).length;
-        }
-        return sum;
-    }, 0);
-    
-    const footerBg = isChristmas ? 'bg-red-900/90 border-white/10' : isDark ? 'bg-slate-900/90 border-white/5' : 'bg-white/90 border-white/40';
+        <div className="flex flex-col items-center mb-6 relative gap-2">
+            <button onClick={() => setActiveModal('calendar')} className="flex items-center gap-2 px-6 py-2 rounded-full bg-slate-100 border border-slate-200 active:scale-95 transition-all shadow-sm">
+                {currentHoliday && <span className="text-sm mr-1">{currentHoliday.icon}</span>}
+                <span className="font-black text-[12px] tracking-[2px] text-slate-700">
+                    {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                </span>
+                <IconChevronDown className="w-3 h-3 text-slate-400"/>
+            </button>
 
-    return (
-        <footer className={`fixed bottom-0 left-0 right-0 ${footerBg} backdrop-blur-2xl border-t shadow-[0_-10px_40px_rgba(0,0,0,0.1)] z-20 pb-safe px-6 py-5 flex gap-8 overflow-x-auto hide-scrollbar transition-all duration-500`}>
-            {CATEGORIES.map(cat => (
-                <div key={cat} className="flex flex-col items-center min-w-[70px] transition-all hover:scale-110">
-                    <span className={`text-[10px] font-black ${isChristmas ? 'text-white/40' : 'text-slate-500'} uppercase tracking-tighter`}>{cat}</span>
-                    <span className={`text-xl font-black ${isChristmas ? 'text-amber-400' : isDark ? 'text-slate-200' : 'text-slate-900'}`}>{categoryCounts[cat]}</span>
+            {currentHoliday && (
+                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    <span className={`text-[7px] font-black uppercase tracking-[2px] ${currentHoliday.color.replace('bg-', 'text-')}`}>
+                        {currentHoliday.name}
+                    </span>
                 </div>
-            ))}
-            <div className={`flex flex-col items-center min-w-[70px] border-l ${isChristmas ? 'border-white/10' : isDark ? 'border-white/5' : 'border-slate-100'} pl-6`}>
-                <span className="text-[10px] font-black text-blue-500 uppercase tracking-tighter">Hoje</span>
-                <span className="text-xl font-black text-blue-600">{totalToday}</span>
-            </div>
-            <div className="flex flex-col items-center min-w-[70px]">
-                <span className={`text-[10px] font-black ${isChristmas ? 'text-green-400' : 'text-purple-500'} uppercase tracking-tighter`}>Mês</span>
-                <span className={`text-xl font-black ${isChristmas ? 'text-green-500' : 'text-purple-600'}`}>{monthlyTotal}</span>
-            </div>
-        </footer>
-    );
-};
+            )}
+        </div>
 
-const ModalOverlay = ({ onClose, children, isDark, isChristmas }: any) => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onClick={onClose} />
-        <div className={`relative ${isChristmas ? 'bg-red-900/95 border-white/20 shadow-red-900/50' : isDark ? 'bg-slate-900 border-white/10' : 'bg-white border-white/20'} rounded-[3rem] shadow-2xl w-full max-w-sm p-8 overflow-hidden animate-pop-in border transition-all duration-500`}>{children}</div>
-    </div>
-);
-
-const CalendarModal = ({ currentDate, onClose, onDateSelect, isDark, isChristmas }: any) => {
-    const [viewDate, setViewDate] = useState(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1));
-    const firstDay = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1).getDay();
-    const daysInMonth = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0).getDate();
-    const days = Array.from({ length: 42 }).map((_, i) => {
-        const d = i - firstDay + 1;
-        return d > 0 && d <= daysInMonth ? d : null;
-    });
-
-    const isHoliday = (day: number | null) => {
-        if (!day) return null;
-        const key = `${String(viewDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-        return HOLIDAYS_SP[key];
-    };
-
-    return (
-        <ModalOverlay onClose={onClose} isDark={isDark} isChristmas={isChristmas}>
-            <div className="flex justify-between items-center mb-8">
-                <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() - 1, 1))} className={`p-3 ${isDark || isChristmas ? 'bg-white/10 text-white' : 'bg-slate-100'} rounded-full active:scale-90`}><IconChevronLeft className="w-5 h-5"/></button>
-                <h3 className={`text-base font-black uppercase tracking-[3px] ${isChristmas ? 'text-white' : isDark ? 'text-slate-200' : 'text-slate-800'}`}>{viewDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</h3>
-                <button onClick={() => setViewDate(new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 1))} className={`p-3 ${isDark || isChristmas ? 'bg-white/10 text-white' : 'bg-slate-100'} rounded-full active:scale-90`}><IconChevronRight className="w-5 h-5"/></button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center">
-                {['D','S','T','Q','Q','S','S'].map(d => <div key={d} className="text-[11px] font-black text-slate-500 mb-3">{d}</div>)}
-                {days.map((d, i) => {
-                    const holiday = isHoliday(d);
-                    const isSelected = d === currentDate.getDate() && viewDate.getMonth() === currentDate.getMonth() && viewDate.getFullYear() === currentDate.getFullYear();
+        {/* Seletor de Categorias Horizontal */}
+        <div className="relative">
+            <div className="flex gap-2 overflow-x-auto no-scrollbar py-3 px-2 -mx-2">
+                {CATEGORIES.map(cat => {
+                    const Icon = getCategoryIcon(cat);
                     return (
-                        <button key={i} disabled={!d} onClick={() => d && onDateSelect(new Date(viewDate.getFullYear(), viewDate.getMonth(), d))} className={`h-12 rounded-2xl text-xs font-black transition-all ${!d ? 'invisible' : holiday ? `${holiday.color} text-white shadow-lg scale-110 z-10` : isSelected ? 'bg-cyan-600 text-white shadow-xl scale-110' : isDark || isChristmas ? 'bg-white/5 text-slate-300' : 'bg-slate-50 text-slate-700 hover:bg-white hover:shadow-md'}`}>
-                            {d}
-                            {holiday && <div className="text-[9px] mt-0.5">{holiday.icon}</div>}
+                        <button 
+                            key={cat}
+                            onClick={() => setActiveCategory(cat)}
+                            className={`flex flex-col items-center gap-1.5 min-w-[60px] p-2 rounded-[1.2rem] transition-all active:scale-95 relative ${activeCategory === cat ? 'bg-linear-to-br from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-600/30' : 'bg-slate-100 text-slate-400'}`}
+                        >
+                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center transition-colors ${activeCategory === cat ? 'bg-white/20' : 'bg-white/50'}`}>
+                                <Icon className="w-4 h-4"/>
+                            </div>
+                            <span className="text-[6px] font-black uppercase tracking-[1px] whitespace-nowrap">{cat}</span>
+                            <CountBadge count={appData[formattedDate]?.[cat]?.filter(isItemActive).length || 0} />
                         </button>
                     );
                 })}
             </div>
-        </ModalOverlay>
+        </div>
+      </header>
+
+      <main className="flex-1 px-4 space-y-4 mt-6 pb-48 relative z-10">
+          <div 
+            onClick={() => setCollapsedCategories(prev => ({ ...prev, [activeCategory]: !prev[activeCategory] }))}
+            className={`flex items-center justify-between px-6 py-3.5 rounded-[1.5rem] shadow-lg transition-all duration-500 cursor-pointer active:scale-[0.98] mb-4 ${
+                collapsedCategories[activeCategory] 
+                ? 'bg-white border border-slate-100' 
+                : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white'
+            }`}
+          >
+              <div className="flex items-center gap-3">
+                  <span className={`text-[16px] font-black uppercase tracking-[1px] ${collapsedCategories[activeCategory] ? 'text-slate-800' : 'text-white'}`}>
+                      {activeCategory}
+                  </span>
+              </div>
+              <div className="p-1">
+                  {collapsedCategories[activeCategory] ? (
+                      <IconChevronRight className="w-5 h-5 text-slate-400"/>
+                  ) : (
+                      <IconChevronDown className="w-5 h-5 text-white"/>
+                  )}
+              </div>
+          </div>
+
+          <EquipmentSection 
+            category={activeCategory} 
+            items={collapsedCategories[activeCategory] 
+                ? [currentDayData[activeCategory][currentDayData[activeCategory].length - 1]]
+                : currentDayData[activeCategory]
+            } 
+            onUpdate={(item: any) => {
+                addToHistory(appData);
+                dispatch({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category: activeCategory, item } });
+            }}
+            onDelete={(id: string) => {
+                addToHistory(appData);
+                dispatch({ type: 'DELETE_SINGLE_ITEM', payload: { date: formattedDate, category: activeCategory, itemId: id } });
+            }}
+            onGallery={setGalleryItem}
+            onCamera={(item: any) => setCameraTarget({ category: activeCategory, item })}
+            deleteMode={deleteMode}
+            selectedForDelete={selectedForDelete}
+            onToggleSelect={(id: string) => setSelectedForDelete(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
+            isChristmas={isChristmas}
+          />
+
+          {collapsedCategories[activeCategory] && currentDayData[activeCategory].filter(isItemActive).length > 0 && (
+              <div className="mt-4 p-4 rounded-[2rem] bg-slate-50 border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 opacity-60">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-[2px]">
+                      {currentDayData[activeCategory].filter(isItemActive).length} itens concluídos ocultos
+                  </span>
+                  <button 
+                    onClick={() => setCollapsedCategories(prev => ({ ...prev, [activeCategory]: false }))}
+                    className="text-[7px] font-black text-blue-500 uppercase tracking-widest underline underline-offset-4"
+                  >
+                      Expandir para ver todos
+                  </button>
+              </div>
+          )}
+      </main>
+
+      {/* Rodapé customizado conforme solicitado */}
+      <footer className="fixed bottom-0 left-0 right-0 z-40 bg-white/90 border-t border-slate-200 p-4 pb-10 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] backdrop-blur-3xl max-w-[480px] mx-auto w-full">
+          <div className="flex items-center justify-between">
+              {/* Contagens individuais */}
+              <div className="flex gap-3 overflow-x-auto no-scrollbar flex-1 pr-4">
+                  {CATEGORIES.map(cat => {
+                      const Icon = getCategoryIcon(cat);
+                      const count = showAllTimeTotals ? categoryTotals[cat] : (currentDayData[cat] || []).filter(isItemActive).length;
+                      return (
+                        <div key={cat} className={`flex flex-col items-center min-w-[32px] transition-all ${activeCategory === cat ? 'scale-110' : 'opacity-30'}`}>
+                            <Icon className={`w-4 h-4 mb-1 ${activeCategory === cat ? 'text-blue-600' : 'text-slate-400'}`}/>
+                            <span className={`text-[10px] font-black ${activeCategory === cat ? 'text-blue-600' : 'text-slate-500'}`}>
+                                {count}
+                            </span>
+                        </div>
+                      );
+                  })}
+              </div>
+              
+              <div className="h-10 w-px bg-slate-200 shrink-0"></div>
+
+              {/* Totais */}
+              <div className="flex items-center gap-4 pl-4 shrink-0">
+                <div className="flex flex-col items-center min-w-[40px]">
+                    <span className="text-[7px] font-black text-blue-600 uppercase tracking-widest mb-1">Dia</span>
+                    <span className="text-xl font-black leading-none text-blue-600">
+                        {Object.values(currentDayData).flat().filter(isItemActive).length}
+                    </span>
+                </div>
+                <button 
+                    onClick={() => setShowAllTimeTotals(!showAllTimeTotals)}
+                    className="flex flex-col items-center active:scale-95 transition-transform"
+                >
+                    <span className={`text-[7px] font-black uppercase tracking-widest mb-1 transition-colors ${showAllTimeTotals ? 'text-purple-600' : 'text-purple-400'}`}>
+                        {showAllTimeTotals ? 'Voltar' : 'Mês'}
+                    </span>
+                    <div className={`rounded-2xl px-5 py-2.5 border transition-all duration-500 ${showAllTimeTotals ? 'bg-purple-600 text-white border-purple-400 shadow-[0_5px_15px_rgba(168,85,247,0.3)]' : 'bg-purple-50 text-purple-600 border-purple-200 shadow-sm backdrop-blur-xl'}`}>
+                        <span className="text-xl font-black leading-none">
+                            {somaTotalGeral}
+                        </span>
+                    </div>
+                </button>
+              </div>
+          </div>
+      </footer>
+
+      {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} />}
+      
+      {cameraTarget && (
+        <CameraModal 
+          target={cameraTarget.item} 
+          onClose={() => setCameraTarget(null)} 
+          onCapture={handleCameraCapture}
+        />
+      )}
+
+      {/* MODAIS REVERTIDOS PARA O DESIGN ORIGINAL */}
+      
+      {activeModal === 'search' && (
+          <Modal title="Pesquisar" onClose={() => setActiveModal(null)}>
+              <div className="space-y-4">
+                  <div className="relative">
+                      <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"/>
+                      <input 
+                        type="text" 
+                        autoFocus
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        placeholder="Contrato ou Serial..."
+                        className="w-full py-4 pl-12 pr-6 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-black text-sm text-slate-800 focus:bg-white transition-all shadow-inner"
+                      />
+                  </div>
+                  <div className="max-h-[350px] overflow-y-auto space-y-2 no-scrollbar">
+                      {searchResults.length > 0 ? (
+                          searchResults.map((res, i) => (
+                              <button 
+                                key={i} 
+                                onClick={() => {
+                                    setCurrentDate(new Date(res.date + 'T12:00:00'));
+                                    setActiveCategory(res.category);
+                                    setActiveModal(null);
+                                }}
+                                className="w-full text-left p-4 rounded-2xl bg-white border border-slate-100 flex flex-col gap-1 active:scale-[0.98] transition-all hover:bg-slate-50 shadow-sm"
+                              >
+                                  <div className="flex justify-between items-center">
+                                      <span className="text-[8px] font-black text-blue-600 uppercase tracking-widest">{res.category}</span>
+                                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                          {new Date(res.date + 'T12:00:00').toLocaleDateString('pt-BR')} - {new Date(res.item.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                      </span>
+                                  </div>
+                                  <p className="text-xs font-black text-slate-800">CTR: {res.item.contract || '---'}</p>
+                                  <p className="text-[10px] font-black text-slate-400 truncate">SN: {res.item.serial || '---'}</p>
+                              </button>
+                          ))
+                      ) : searchQuery ? (
+                          <p className="text-center py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhum resultado</p>
+                      ) : (
+                          <p className="text-center py-8 text-[10px] font-black text-slate-300 uppercase tracking-widest">Digite para buscar</p>
+                      )}
+                  </div>
+              </div>
+          </Modal>
+      )}
+
+      {activeModal === 'notifications' && (
+          <Modal title="Notificações" onClose={() => setActiveModal(null)}>
+              <div className="space-y-3 max-h-[400px] overflow-y-auto no-scrollbar">
+                  {notifications.map(n => (
+                      <div key={n.id} className={`p-4 rounded-2xl border ${n.read ? 'bg-white/5 border-white/5 opacity-60' : 'bg-blue-600/10 border-blue-500/20'}`}>
+                          <p className="text-xs font-black text-white mb-1">{n.message}</p>
+                          <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">
+                              {new Date(n.timestamp).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                      </div>
+                  ))}
+              </div>
+          </Modal>
+      )}
+
+      {activeModal === 'calendar' && (
+          <Modal title="Selecionar Data" onClose={() => setActiveModal(null)}>
+              <div className="space-y-6">
+                  <div className="flex items-center justify-between px-2">
+                      <button 
+                        onClick={() => {
+                            const d = new Date(currentDate);
+                            d.setMonth(d.getMonth() - 1);
+                            setCurrentDate(d);
+                        }}
+                        className="p-2 rounded-xl bg-white/5 text-white active:scale-95 transition-all"
+                      >
+                          <IconChevronLeft className="w-5 h-5"/>
+                      </button>
+                      <span className="font-black uppercase text-[10px] tracking-[4px] text-white">
+                          {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
+                      </span>
+                      <button 
+                        onClick={() => {
+                            const d = new Date(currentDate);
+                            d.setMonth(d.getMonth() + 1);
+                            setCurrentDate(d);
+                        }}
+                        className="p-2 rounded-xl bg-white/5 text-white active:scale-95 transition-all"
+                      >
+                          <IconChevronRight className="w-5 h-5"/>
+                      </button>
+                  </div>
+                  <div className="grid grid-cols-7 gap-2">
+                      {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
+                          <div key={d} className="h-8 flex items-center justify-center text-[8px] font-black text-slate-600">{d}</div>
+                      ))}
+                      {(() => {
+                          const year = currentDate.getFullYear();
+                          const month = currentDate.getMonth();
+                          const firstDay = new Date(year, month, 1).getDay();
+                          const daysInMonth = new Date(year, month + 1, 0).getDate();
+                          const days = [];
+                          for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} />);
+                          for (let day = 1; day <= daysInMonth; day++) {
+                              const d = new Date(year, month, day);
+                              const isToday = getFormattedDate(new Date()) === getFormattedDate(d);
+                              const isSelected = getFormattedDate(currentDate) === getFormattedDate(d);
+                              days.push(
+                                <button 
+                                    key={day} 
+                                    onClick={() => { 
+                                        setCurrentDate(d);
+                                        setActiveModal(null);
+                                    }} 
+                                    className={`h-10 rounded-xl font-black text-[10px] transition-all relative ${
+                                        isSelected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 
+                                        isToday ? 'bg-white/10 text-blue-400' : 'bg-white/5 text-slate-400 active:bg-white/10'
+                                    }`}
+                                >
+                                    {day}
+                                    {appData[getFormattedDate(d)] && !isSelected && (
+                                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-500" />
+                                    )}
+                                </button>
+                              );
+                          }
+                          return days;
+                      })()}
+                  </div>
+              </div>
+          </Modal>
+      )}
+
+      {activeModal === 'settings' && (
+          <Modal title="Configurações" onClose={() => setActiveModal(null)}>
+              <div className="space-y-6">
+                  <div className="flex flex-col items-center mb-4">
+                      <div 
+                        onClick={() => setCameraTarget({ category: activeCategory, item: 'profile' })}
+                        className="relative w-24 h-24 rounded-full bg-white/5 border-2 border-white/10 overflow-hidden cursor-pointer group"
+                      >
+                          {userProfile.profileImage ? (
+                              <img src={userProfile.profileImage} className="w-full h-full object-cover" />
+                          ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                  <IconCamera className="w-8 h-8 text-slate-600"/>
+                              </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <IconCameraLens className="w-6 h-6 text-white"/>
+                          </div>
+                      </div>
+                      <p className="mt-2 text-[8px] font-black text-slate-500 uppercase tracking-widest">Foto de Perfil</p>
+                  </div>
+                  <div className="space-y-4">
+                      <div>
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-[4px] mb-2 block">Nome de Usuário</label>
+                          <input 
+                            type="text" 
+                            value={userProfile.name} 
+                            onChange={e => setUserProfile({...userProfile, name: e.target.value})}
+                            className="w-full py-4 px-6 rounded-2xl bg-white/5 border-none outline-none font-black text-sm text-white focus:bg-white/10 transition-all"
+                            placeholder="Ex: Leo Luz"
+                          />
+                      </div>
+                      <div>
+                          <label className="text-[9px] font-black text-slate-500 uppercase tracking-[4px] mb-2 block">CPF</label>
+                          <input 
+                            type="text" 
+                            value={userProfile.cpf || ''} 
+                            onChange={e => setUserProfile({...userProfile, cpf: e.target.value})}
+                            className="w-full py-4 px-6 rounded-2xl bg-white/5 border-none outline-none font-black text-sm text-white focus:bg-white/10 transition-all"
+                            placeholder="000.000.000-00"
+                          />
+                      </div>
+                  </div>
+                  <div className="pt-4 space-y-3">
+                      <button onClick={() => setActiveModal(null)} className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-[3px] text-[10px] active:scale-95 transition-all shadow-xl shadow-blue-600/20">
+                          Salvar Perfil
+                      </button>
+                      <button 
+                        onClick={() => {
+                            if (confirm("Tem certeza que deseja apagar todos os dados? Esta ação é irreversível.")) {
+                                localStorage.removeItem('equipmentData');
+                                dispatch({ type: 'SET_DATA', payload: {} });
+                                setActiveModal(null);
+                            }
+                        }}
+                        className="w-full py-4 bg-red-600/10 text-red-500 border border-red-500/20 rounded-2xl font-black uppercase tracking-[3px] text-[10px] active:scale-95 transition-all"
+                      >
+                          Limpar Todos os Dados
+                      </button>
+                  </div>
+              </div>
+          </Modal>
+      )}
+
+      {activeModal === 'export' && (
+          <Modal title="Relatórios e Backup" onClose={() => setActiveModal(null)}>
+              <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                      <button onClick={() => {
+                          const dataStr = JSON.stringify(appData);
+                          const blob = new Blob([dataStr], { type: "application/json" });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `backup_equipamentos_${formattedDate}.json`;
+                          link.click();
+                      }} className="py-5 bg-white/5 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all group">
+                          <IconDownload className="w-5 h-5 text-cyan-500 group-hover:scale-110 transition-transform"/>
+                          <span className="font-black uppercase text-[8px] tracking-[2px] text-slate-300">Exportar JSON</span>
+                      </button>
+                      <div className="relative">
+                          <button className="w-full h-full py-5 bg-white/5 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all group">
+                              <IconExport className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform"/>
+                              <span className="font-black uppercase text-[8px] tracking-[2px] text-slate-300">Importar JSON</span>
+                          </button>
+                          <input 
+                            type="file" 
+                            accept=".json" 
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    const reader = new FileReader();
+                                    reader.onload = (event) => {
+                                        try {
+                                            const json = JSON.parse(event.target?.result as string);
+                                            dispatch({ type: 'SET_DATA', payload: json });
+                                            setActiveModal(null);
+                                        } catch (err) { alert("Arquivo inválido"); }
+                                    };
+                                    reader.readAsText(file);
+                                }
+                            }}
+                          />
+                      </div>
+                  </div>
+
+                  <div className="h-px bg-white/5 my-2"></div>
+                  
+                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px] text-center mb-2">Compartilhar Relatório Mensal</p>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                      <button 
+                        onClick={() => {
+                            const text = generateMonthlyReport(appData, currentDate);
+                            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+                        }}
+                        className="py-4 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
+                      >
+                          <IconWhatsapp className="w-5 h-5 text-emerald-500"/>
+                      </button>
+                      <button 
+                        onClick={() => {
+                            const text = generateMonthlyReport(appData, currentDate);
+                            window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(text)}`);
+                        }}
+                        className="py-4 bg-sky-600/10 border border-sky-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
+                      >
+                          <IconTelegram className="w-5 h-5 text-sky-500"/>
+                      </button>
+                      <button 
+                        onClick={() => {
+                            const subject = `Relatório de Equipamentos - ${currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
+                            const body = generateMonthlyReport(appData, currentDate);
+                            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                        }}
+                        className="py-4 bg-slate-600/10 border border-slate-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
+                      >
+                          <IconEmail className="w-5 h-5 text-slate-400"/>
+                      </button>
+                  </div>
+              </div>
+          </Modal>
+      )}
+
+      {activeModal === 'notifications' && (
+          <Modal title="Atividades do Dia" onClose={() => setActiveModal(null)}>
+              <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar">
+                  {notifications.length > 0 ? (
+                      notifications.map(notif => (
+                          <div key={notif.id} className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center gap-4">
+                              <div className={`w-2 h-2 rounded-full ${notif.type === 'Adição' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                              <div className="flex-1">
+                                  <div className="flex justify-between items-center mb-1">
+                                      <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">{notif.type}</span>
+                                      <span className="text-[8px] font-black text-slate-400">{notif.time}</span>
+                                  </div>
+                                  <p className="text-[11px] font-black text-slate-500">{notif.details}</p>
+                              </div>
+                          </div>
+                      ))
+                  ) : (
+                      <div className="text-center py-10">
+                          <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest">Nenhuma atividade registrada</p>
+                      </div>
+                  )}
+              </div>
+          </Modal>
+      )}
+      {activeModal === 'about' && (
+          <Modal title="Sobre o App" onClose={() => setActiveModal(null)}>
+              <div className="text-center py-4">
+                  <CustomMenuIcon className="w-24 h-24 mx-auto mb-8 drop-shadow-2xl" isChristmas={isChristmas}/>
+                  <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Stream+ Control</h2>
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[6px] mb-10">Versão 1.0.3</p>
+                  <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
+                      <p className="text-[8px] font-black text-slate-600 uppercase tracking-[4px] mb-2">Desenvolvido por</p>
+                      <p className="text-xl font-black text-cyan-500 uppercase tracking-tighter">Leo Luz</p>
+                  </div>
+              </div>
+          </Modal>
+      )}
+
+    </div>
+  );
+};
+
+const CountBadge = ({ count }: { count: number }) => {
+    const [prevCount, setPrevCount] = useState(count);
+    const [isAnimating, setIsAnimating] = useState(false);
+
+    useEffect(() => {
+        if (count > prevCount) {
+            setIsAnimating(true);
+            const timer = setTimeout(() => setIsAnimating(false), 800);
+            setPrevCount(count);
+            return () => clearTimeout(timer);
+        } else if (count < prevCount) {
+            setPrevCount(count);
+        }
+    }, [count, prevCount]);
+
+    if (count === 0) return null;
+
+    return (
+        <div className={`absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full flex items-center justify-center font-black text-[7px] transition-all duration-300 ${
+            isAnimating 
+            ? 'bg-green-400 text-white shadow-[0_0_12px_#4ade80] scale-125 z-10' 
+            : 'bg-green-500 text-white shadow-sm'
+        }`}>
+            {count}
+        </div>
     );
 };
 
-const ConfirmationModal = ({ message, onConfirm, onCancel, isDark, isChristmas }: any) => (
-    <ModalOverlay onClose={onCancel} isDark={isDark} isChristmas={isChristmas}>
-        <div className="text-center">
-            <h3 className={`font-black mb-8 text-xl uppercase tracking-tighter ${isChristmas ? 'text-white' : isDark ? 'text-white' : 'text-slate-900'}`}>{message}</h3>
-            <div className="flex gap-4">
-                <button onClick={onCancel} className={`flex-1 py-5 ${isDark || isChristmas ? 'bg-white/10 text-white' : 'bg-slate-100 text-slate-500'} rounded-[1.8rem] font-black text-xs active:scale-95 transition-all`}>Não</button>
-                <button onClick={onConfirm} className={`flex-1 py-5 ${isChristmas ? 'bg-green-600' : 'bg-red-500'} text-white rounded-[1.8rem] font-black text-xs active:scale-95 transition-all shadow-2xl`}>Sim</button>
-            </div>
-        </div>
-    </ModalOverlay>
-);
+const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas }: any) => {
+    // Ordenar itens: preenchidos primeiro (por hora), em branco por último
+    const sortedItems = [...items].sort((a, b) => {
+        const aActive = isItemActive(a);
+        const bActive = isItemActive(b);
+        if (aActive && !bActive) return -1;
+        if (!aActive && bActive) return 1;
+        return (a.createdAt || 0) - (b.createdAt || 0);
+    });
 
-const PhotoGalleryModal = ({ item, onClose }: any) => (
-    <div className="fixed inset-0 z-[100] bg-black/98 backdrop-blur-3xl flex flex-col p-8 overflow-hidden">
-        <div className="flex justify-between items-center text-white mb-10">
-            <h3 className="font-black text-2xl tracking-[10px] uppercase text-white/50">Fotos</h3>
-            <button onClick={onClose} className="p-4 bg-white/10 rounded-full active:scale-90"><IconX className="w-8 h-8"/></button>
-        </div>
-        <div className="flex-1 overflow-y-auto grid grid-cols-1 gap-6 pb-20">
-            {item.photos.map((p: any, i: any) => (
-                <div key={i} className="group relative aspect-video overflow-hidden rounded-[3rem] border border-white/10 shadow-[0_30px_60px_rgba(0,0,0,0.5)] bg-slate-900">
-                    <img src={p} className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105" />
+    return (
+        <div className="space-y-2">
+            {sortedItems.map((item: any) => (
+                <div key={item.id} className="flex gap-1.5 animate-fade-in">
+                    <div className={`flex-1 p-2 rounded-[1.2rem] border shadow-sm flex flex-col gap-2 transition-all duration-500 ${deleteMode && selectedForDelete?.includes(item.id) ? 'bg-red-50 border-red-100' : 'bg-white/40 border-slate-100/50 backdrop-blur-sm'}`}>
+                        <div className="flex gap-1.5 items-center">
+                            {deleteMode && (
+                                <button 
+                                    onClick={() => onToggleSelect(item.id)}
+                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${selectedForDelete?.includes(item.id) ? 'bg-red-500 border-red-400 text-white' : 'bg-slate-50 border-slate-200 text-transparent'}`}
+                                >
+                                    <IconTrash className="w-3 h-3"/>
+                                </button>
+                            )}
+                            
+                            {/* Hora à esquerda */}
+                            <div className="min-w-[35px] flex flex-col items-center justify-center opacity-30">
+                                <span className="text-[8px] font-black text-slate-500">
+                                    {new Date(item.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                            </div>
+
+                            <div className="flex-1 flex flex-col gap-1.5">
+                                <div className="flex gap-1">
+                                    {/* Campo Contrato */}
+                                    <div className="flex flex-col gap-1 flex-[0.38]">
+                                        <div className="relative">
+                                            <input 
+                                                type="number" 
+                                                placeholder="CONTRATO" 
+                                                value={item.contract} 
+                                                onChange={e => e.target.value.length <= 10 && onUpdate({...item, contract: e.target.value})} 
+                                                className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Campo Serial */}
+                                    <div className="flex flex-col gap-1 flex-1">
+                                        <div className="relative">
+                                            <input 
+                                                type="text" 
+                                                placeholder="SERIAL" 
+                                                value={item.serial} 
+                                                onChange={e => e.target.value.length <= 20 && onUpdate({...item, serial: e.target.value})} 
+                                                className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Botões de Ação */}
+                                    <div className="flex gap-1">
+                                        <button onClick={() => onCamera(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#111827] text-white active:scale-95 transition-all shadow-md">
+                                            <IconCameraLens className="w-4 h-4"/>
+                                        </button>
+                                        <button onClick={() => onGallery(item)} className={`w-8 h-8 flex items-center justify-center rounded-lg active:scale-95 transition-all border ${item.photos.length > 0 ? 'bg-green-50 text-green-600 border-green-100' : 'bg-white text-slate-300 border-slate-100 shadow-sm'}`}>
+                                            <div className="relative">
+                                                <IconGallery className="w-4 h-4"/>
+                                                <CountBadge count={item.photos.length} />
+                                            </div>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             ))}
-            {item.photos.length === 0 && <div className="col-span-1 py-40 text-center text-white/10 font-black uppercase tracking-[20px] text-lg">Sem Imagens</div>}
+        </div>
+    );
+};
+
+const PhotoGalleryModal = ({ item, onClose }: any) => (
+    <div className="fixed inset-0 z-[100] bg-slate-50 flex flex-col p-6">
+        <div className="flex justify-between items-center mb-10">
+            <span className="font-black text-slate-400 text-[10px] uppercase tracking-[12px] opacity-40">GALERIA</span>
+            <button onClick={onClose} className="p-4 bg-slate-200 rounded-full text-slate-600 active:scale-95 transition-all"><IconX className="w-7 h-7"/></button>
+        </div>
+        <div className="flex-1 overflow-y-auto space-y-6 no-scrollbar pb-24">
+            {item.photos.map((p: any, i: any) => (
+                <div key={i} className="aspect-video rounded-[2.5rem] overflow-hidden bg-white border border-slate-100 shadow-xl">
+                    <img src={p} className="w-full h-full object-contain" alt={`Equipment ${i}`} />
+                </div>
+            ))}
         </div>
     </div>
 );
 
-const ShareModal = ({ appData, currentDate, isExportMode, onClose }: any) => {
-    const handleExportCsv = (scope: 'day' | 'month') => {
-        let items: any[] = [];
-        const dateStr = getFormattedDate(currentDate);
-        const prefix = dateStr.substring(0, 7);
-        Object.entries(appData).forEach(([d, dayData]: [string, any]) => {
-            if (dayData && ((scope === 'day' && d === dateStr) || (scope === 'month' && d.startsWith(prefix)))) {
-                CATEGORIES.forEach(cat => {
-                    dayData[cat].forEach((i: any) => { if (isItemActive(i)) items.push({ ...i, d, cat }); });
-                });
-            }
-        });
-        let csv = "Data,Categoria,Contrato,Serial\n" + items.map(i => `${i.d},${i.cat},${i.contract},${i.serial}`).join('\n');
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `relatorio_${scope}_${dateStr}.csv`;
-        link.click();
-        onClose();
-    };
-
-    return (
-        <div className="space-y-4">
-            <button onClick={() => handleExportCsv('day')} className="w-full py-5 bg-white border-4 border-slate-50 rounded-[2rem] font-black text-[11px] uppercase tracking-[3px] flex items-center justify-center gap-3 active:scale-95 shadow-xl text-slate-800">
-                <IconFileExcel className="w-6 h-6 text-emerald-600"/> Planilha do Dia
-            </button>
-            <button onClick={() => handleExportCsv('month')} className="w-full py-5 bg-white border-4 border-slate-50 rounded-[2rem] font-black text-[11px] uppercase tracking-[3px] flex items-center justify-center gap-3 active:scale-95 shadow-xl text-slate-800">
-                <IconFileExcel className="w-6 h-6 text-emerald-600"/> Planilha do Mês
-            </button>
+const Modal = ({ title, children, onClose }: any) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
+        <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
+        <div className="relative w-full max-w-sm bg-white border border-slate-100 rounded-[3rem] shadow-2xl p-10 animate-pop-in">
+            <div className="flex justify-between items-center mb-8">
+                <h3 className="font-black uppercase tracking-[5px] text-[9px] text-slate-400">{title}</h3>
+                <button onClick={onClose} className="p-2.5 rounded-xl bg-slate-50 active:scale-95 transition-all text-slate-400"><IconX className="w-4 h-4"/></button>
+            </div>
+            {children}
         </div>
-    );
-};
+    </div>
+);
 
-const App = () => (<ErrorBoundary><AppContent /></ErrorBoundary>)
+const App = () => (
+  <ErrorBoundary>
+    <AppContent />
+  </ErrorBoundary>
+);
+
 export default App;

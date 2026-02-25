@@ -1,90 +1,67 @@
+
 import React from 'react';
 
-// Stream+ App Icon - Style Reference: Claro Box TV (Matte Black, Rounded, Minimalist)
-export const CustomMenuIcon = ({ className = 'w-10 h-10' }: { className?: string }) => (
+// Ícone principal do App com detalhe de Natal condicional
+export const CustomMenuIcon = ({ className = 'w-10 h-10', isChristmas = false }: { className?: string; isChristmas?: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
     <defs>
-      <linearGradient id="bgClean" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#f3f4f6" /> 
-        <stop offset="100%" stopColor="#d1d5db" /> 
+      <linearGradient id="bgIcon" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor={isChristmas ? "#f87171" : "#f1f5f9"} /> 
+        <stop offset="100%" stopColor={isChristmas ? "#ef4444" : "#cbd5e1"} /> 
       </linearGradient>
 
-      <linearGradient id="boxBlackMain" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#27272a" /> 
-        <stop offset="100%" stopColor="#09090b" /> 
+      <linearGradient id="boxInner" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor={isChristmas ? "#166534" : "#334155"} /> 
+        <stop offset="100%" stopColor={isChristmas ? "#064e3b" : "#0f172a"} /> 
       </linearGradient>
       
-      <filter id="softDropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur in="SourceAlpha" stdDeviation="3" />
-        <feOffset dx="0" dy="5" result="offsetblur" />
-        <feComponentTransfer>
-          <feFuncA type="linear" slope="0.3" />
-        </feComponentTransfer>
-        <feMerge>
-          <feMergeNode />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-    </defs>
-    
-    <rect x="0" y="0" width="100" height="100" fill="url(#bgClean)" rx="20" />
-    
-    <g transform="translate(50, 52) scale(0.75)" filter="url(#softDropShadow)">
-        <ellipse cx="0" cy="28" rx="45" ry="12" fill="#000" opacity="0.25" filter="blur(4px)" />
-        <path d="M -45 -15 Q -45 -25, -35 -25 L 35 -25 Q 45 -25, 45 -15 L 45 15 Q 45 25, 35 25 L -35 25 Q -45 25, -45 15 Z" fill="url(#boxBlackMain)" />
-        <path d="M -44 15 Q -44 24, -35 24 L 35 24 Q 44 24, 44 15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
-        <path d="M -35 -24 L 35 -24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-        <ellipse cx="0" cy="-5" rx="25" ry="10" fill="white" opacity="0.03" />
-        <circle cx="35" cy="15" r="1.5" fill="#ef4444">
-             <animate attributeName="opacity" values="1;0.4;1" dur="3s" repeatCount="indefinite" />
-        </circle>
-        <rect x="-10" y="-2" width="20" height="4" rx="2" fill="rgba(255,255,255,0.1)" />
-    </g>
-    <path d="M 0 0 L 100 0 L 100 100 L 0 100 Z" fill="url(#glassSheen)" opacity="0.1" style={{mixBlendMode: 'overlay'}} />
-  </svg>
-);
-
-// Loading Icon with Red/Green LED Blinking
-export const LoadingBoxIcon = ({ className = 'w-32 h-32' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
-    <defs>
-      <linearGradient id="boxBlackMainL" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#27272a" /> 
-        <stop offset="100%" stopColor="#09090b" /> 
-      </linearGradient>
-      <filter id="softDropShadowL" x="-50%" y="-50%" width="200%" height="200%">
-        <feGaussianBlur in="SourceAlpha" stdDeviation="4" />
-        <feOffset dx="0" dy="6" result="offsetblur" />
-        <feComponentTransfer><feFuncA type="linear" slope="0.4" /></feComponentTransfer>
+        <feOffset dx="0" dy="4" result="offsetblur" />
+        <feComponentTransfer><feFuncA type="linear" slope="0.2" /></feComponentTransfer>
         <feMerge><feMergeNode /><feMergeNode in="SourceGraphic" /></feMerge>
       </filter>
     </defs>
     
-    <g transform="translate(50, 50) scale(0.9)" filter="url(#softDropShadowL)">
-        <ellipse cx="0" cy="28" rx="45" ry="12" fill="#000" opacity="0.3" filter="blur(5px)" />
-        <path d="M -45 -15 Q -45 -25, -35 -25 L 35 -25 Q 45 -25, 45 -15 L 45 15 Q 45 25, 35 25 L -35 25 Q -45 25, -45 15 Z" fill="url(#boxBlackMainL)" />
-        <path d="M -44 15 Q -44 24, -35 24 L 35 24 Q 44 24, 44 15" fill="none" stroke="rgba(255,255,255,0.15)" strokeWidth="1.5" />
-        <path d="M -35 -24 L 35 -24" fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
-        <rect x="-10" y="-2" width="20" height="4" rx="2" fill="rgba(255,255,255,0.1)" />
+    <rect x="0" y="0" width="100" height="100" fill="url(#bgIcon)" rx="28" />
+    
+    <g transform="translate(50, 52) scale(0.7)" filter="url(#shadow)">
+        <path d="M -45 -15 Q -45 -25, -35 -25 L 35 -25 Q 45 -25, 45 -15 L 45 15 Q 45 25, 35 25 L -35 25 Q -45 25, -45 15 Z" fill="url(#boxInner)" />
+        <path d="M -44 15 Q -44 24, -35 24 L 35 24 Q 44 24, 44 15" fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="1.5" />
         
-        {/* LED Blinking Green/Red */}
-        <circle cx="35" cy="15" r="2.5">
-             <animate attributeName="fill" values="#ef4444;#22c55e;#ef4444" dur="0.8s" repeatCount="indefinite" />
-             <animate attributeName="opacity" values="1;0.8;1" dur="0.8s" repeatCount="indefinite" />
+        {isChristmas && (
+          <g transform="translate(-10, -35) rotate(-15)">
+            <path d="M 0 0 L 30 0 L 15 -25 Z" fill="#ef4444" stroke="white" strokeWidth="2" />
+            <circle cx="15" cy="-25" r="5" fill="white" />
+            <rect x="-2" y="-2" width="34" height="8" rx="4" fill="white" />
+          </g>
+        )}
+
+        <circle cx="35" cy="15" r="2" fill={isChristmas ? "#fbbf24" : "#22c55e"}>
+             <animate attributeName="opacity" values="1;0.4;1" dur="2s" repeatCount="indefinite" />
         </circle>
     </g>
   </svg>
 );
 
-export const IconBox = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+export const LoadingBoxIcon = ({ className = 'w-32 h-32' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" className={className} shapeRendering="geometricPrecision">
+    <rect x="20" y="30" width="60" height="40" rx="12" fill="#0f172a" />
+    <circle cx="70" cy="50" r="3" fill="#22c55e">
+      <animate attributeName="opacity" values="1;0.2;1" dur="1s" repeatCount="indefinite" />
+    </circle>
   </svg>
 );
 
-export const IconMenu = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+export const IconSun = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 9H3m15.364-4.364l-.707.707M6.343 17.657l-.707.707m12.728 0l-.707-.707M6.343 6.343l-.707-.707M12 8a4 4 0 100 8 4 4 0 000-8z" />
+  </svg>
+);
+
+export const IconMoon = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
   </svg>
 );
 
@@ -94,23 +71,16 @@ export const IconCalendar = ({ className = 'w-6 h-6' }: { className?: string }) 
   </svg>
 );
 
-export const IconSave = ({ className = 'w-6 h-6' }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 20h14a2 2 0 002-2V8l-5-5H5a2 2 0 00-2 2v16a2 2 0 002 2z" />
-    </svg>
-);
-
 export const IconExport = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
   </svg>
 );
 
 export const IconSettings = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
@@ -129,12 +99,6 @@ export const IconPlus = ({ className = 'w-6 h-6' }: { className?: string }) => (
 export const IconMinus = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M20 12H4" />
-  </svg>
-);
-
-export const IconTrash = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
 
@@ -161,12 +125,6 @@ export const IconGallery = ({ className = 'w-6 h-6' }: { className?: string }) =
   <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
     <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
   </svg>
-);
-
-export const IconClipboard = ({ className = 'w-6 h-6' }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2" />
-    </svg>
 );
 
 export const IconX = ({ className = 'w-6 h-6' }: { className?: string }) => (
@@ -199,22 +157,39 @@ export const IconChevronDown = ({ className = 'w-6 h-6' }: { className?: string 
   </svg>
 );
 
-export const IconChevronUp = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-  </svg>
-);
-
 export const IconStack = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
   </svg>
 );
 
-export const IconFileWord = ({ className = 'w-6 h-6' }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
+export const IconBox = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+  </svg>
+);
+
+export const IconSpeaker = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+  </svg>
+);
+
+export const IconRemote = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <rect x="7" y="2" width="10" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+    <circle cx="12" cy="6" r="1" />
+    <circle cx="12" cy="10" r="1" />
+    <circle cx="12" cy="14" r="1" />
+    <circle cx="12" cy="18" r="2" />
+  </svg>
+);
+
+export const IconChip = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <rect x="5" y="5" width="14" height="14" rx="2" strokeLinecap="round" strokeLinejoin="round" />
+    <path d="M9 5V3m6 2V3M9 21v-2m6 2v-2M5 9H3m2 6H3m16-6h2m-2 6h2" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
 );
 
 export const IconFileExcel = ({ className = 'w-6 h-6' }: { className?: string }) => (
@@ -247,19 +222,9 @@ export const IconBell = ({ className = 'w-6 h-6' }: { className?: string }) => (
   </svg>
 );
 
-export const IconBarcode = ({ className = 'w-6 h-6' }: { className?: string }) => (
+export const IconTrash = ({ className = 'w-6 h-6' }: { className?: string }) => (
   <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4m4-4h.01M16 8h.01M8 12h.01M16 12h.01M8 16h.01M16 16h.01" />
-    <path d="M4 6h1v12H4zm2 0h2v12H6zm3 0h1v12H9zm3 0h2v12h-2zm3 0h1v12h-1zm3 0h2v12h-2z" fill="currentColor" stroke="none"/>
-  </svg>
-);
-
-export const IconQrCode = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v1m6 11h2m-6 0h-2v4h2v-4zm-6 12v-2m0 0v-2m0 2h2m-2 0H4m8-14v4m0-4h4m-4 4h4m-4-4v4m0 0h4m-4 4v4m0-4h4m-4 4h4m-4-4v4m0 0h4" />
-    <rect x="5" y="5" width="4" height="4" rx="1" />
-    <rect x="15" y="5" width="4" height="4" rx="1" />
-    <rect x="5" y="15" width="4" height="4" rx="1" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
   </svg>
 );
 
@@ -270,15 +235,30 @@ export const IconCameraLens = ({ className = 'w-6 h-6' }: { className?: string }
     </svg>
 );
 
-export const IconMapPin = ({ className = 'w-6 h-6' }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-    </svg>
+// Added missing IconSave component
+export const IconSave = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 4H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8l-4-4H8z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 14a2 2 0 100 4 2 2 0 000-4z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16 4v4H8V4" />
+  </svg>
 );
 
+// Added missing IconDownload component
 export const IconDownload = ({ className = 'w-6 h-6' }: { className?: string }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  </svg>
+);
+
+export const IconCloud = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+  </svg>
+);
+
+export const IconCloudOff = ({ className = 'w-6 h-6' }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z M3 3l18 18" />
+  </svg>
 );
