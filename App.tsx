@@ -37,6 +37,7 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
     const month = date.getMonth();
     const year = date.getFullYear();
     let report = `Relatório Mensal - ${date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}\n\n`;
+    const totals: Record<string, number> = {};
     
     CATEGORIES.forEach(cat => {
         report += `--- ${cat.toUpperCase()} ---\n`;
@@ -58,9 +59,18 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
             }
         });
         
+        totals[cat] = catEntries;
         if (catEntries === 0) report += `Nenhum registro.\n`;
         report += `\n`;
     });
+
+    report += `\n============================\n`;
+    report += `RESUMO DE TOTAIS DO MÊS\n`;
+    report += `============================\n`;
+    CATEGORIES.forEach(cat => {
+        report += `TOTAL ${cat.toUpperCase()}: ${totals[cat]}\n`;
+    });
+    report += `============================\n`;
     
     return report;
 };
@@ -443,7 +453,6 @@ const AppContent = () => {
         onMenuClick={setActiveModal} 
         userProfile={userProfile} 
         isChristmas={isChristmas} 
-        syncStatus={syncStatus}
       />
 
       {isChristmas && (
@@ -600,6 +609,26 @@ const AppContent = () => {
                       <IconChevronDown className="w-5 h-5 text-white"/>
                   )}
               </div>
+          </div>
+
+          <div className="flex justify-center -mt-2 mb-2">
+             <div className="flex items-center gap-1.5 px-3 py-1 bg-white/50 backdrop-blur-sm rounded-full border border-slate-100/50 shadow-sm">
+                {syncStatus === 'syncing' && (
+                    <div className="w-2.5 h-2.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                )}
+                {syncStatus === 'synced' && (
+                    <IconCloud className="w-2.5 h-2.5 text-emerald-500 opacity-60" />
+                )}
+                {syncStatus === 'offline' && (
+                    <IconCloudOff className="w-2.5 h-2.5 text-slate-300" />
+                )}
+                {syncStatus === 'error' && (
+                    <IconCloudOff className="w-2.5 h-2.5 text-red-400" />
+                )}
+                <span className="text-[6px] font-black text-slate-400 uppercase tracking-[2px]">
+                    {syncStatus === 'syncing' ? 'Sincronizando' : syncStatus === 'synced' ? 'Nuvem OK' : syncStatus === 'offline' ? 'Offline' : 'Erro Sync'}
+                </span>
+             </div>
           </div>
 
           <EquipmentSection 
