@@ -68,7 +68,8 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
     report += `RESUMO DE TOTAIS DO MÊS\n`;
     report += `============================\n`;
     CATEGORIES.forEach(cat => {
-        report += `TOTAL ${cat.toUpperCase()}: ${totals[cat]}\n`;
+        const label = cat.toUpperCase().padEnd(12, ' ');
+        report += `${label} | ${totals[cat]}\n`;
     });
     report += `============================\n`;
     
@@ -438,10 +439,15 @@ const AppContent = () => {
     setCameraTarget(null);
   };
 
-  if (isLoading) return <div className="fixed inset-0 flex flex-col items-center justify-center bg-slate-50 z-[100]"><LoadingBoxIcon/><p className="mt-4 font-black uppercase tracking-widest text-[10px] text-slate-400 animate-pulse">Iniciando Controle...</p></div>;
+  if (isLoading) return (
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#f0f7ff] z-[100]">
+        <LoadingBoxIcon/>
+        <p className="mt-4 font-black uppercase tracking-widest text-[10px] text-slate-400 animate-pulse">Iniciando Controle...</p>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col min-h-screen relative w-full overflow-x-hidden bg-slate-50">
+    <div className="flex flex-col min-h-screen relative w-full overflow-x-hidden bg-[#f0f7ff] animate-fade-in">
       
       <div className="fixed inset-0 pointer-events-none opacity-40">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-slate-50"></div>
@@ -498,12 +504,12 @@ const AppContent = () => {
                 </div>
             </div>
             
-            <div className="flex gap-1 items-center">
+            <div className="flex gap-2 items-center">
                 <button 
                     onClick={handleAddItem} 
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-95 shadow-sm transition-all"
+                    className="w-7 h-7 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-95 shadow-[0_2px_0_#2563eb,0_4px_8px_rgba(37,99,235,0.3)] active:shadow-none active:translate-y-[2px] transition-all"
                 >
-                    <IconPlus className="w-3.5 h-3.5"/>
+                    <IconPlus className="w-3 h-3"/>
                 </button>
                 <button 
                     onClick={() => {
@@ -518,28 +524,28 @@ const AppContent = () => {
                             setDeleteMode(true);
                         }
                     }} 
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 shadow-sm transition-all ${deleteMode ? 'bg-red-500 text-white border-red-400' : 'bg-slate-100 text-slate-600 border-slate-200'}`}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center border active:scale-95 transition-all active:translate-y-[2px] ${deleteMode ? 'bg-red-500 text-white border-red-400 shadow-[0_2px_0_#dc2626,0_4px_8px_rgba(220,38,38,0.3)] active:shadow-none' : 'bg-slate-100 text-slate-600 border-slate-200 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none'}`}
                 >
-                    {deleteMode && selectedForDelete.length > 0 ? <IconTrash className="w-3.5 h-3.5"/> : <IconMinus className="w-3.5 h-3.5"/>}
+                    {deleteMode && selectedForDelete.length > 0 ? <IconTrash className="w-3 h-3"/> : <IconMinus className="w-3 h-3"/>}
                 </button>
                 <button 
                     onClick={handleUndo} 
                     disabled={!deleteMode && history.length === 0}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-sm transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
                 >
-                    <IconUndo className="w-3.5 h-3.5"/>
+                    <IconUndo className="w-3 h-3"/>
                 </button>
-                <button onClick={() => setActiveModal('search')} className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-sm transition-all">
-                    <IconSearch className="w-3.5 h-3.5"/>
+                <button onClick={() => setActiveModal('search')} className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all">
+                    <IconSearch className="w-3 h-3"/>
                 </button>
                 <button 
                     onClick={() => {
                         setActiveModal('notifications');
                         setHasNewNotifications(false);
                     }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-sm transition-all relative"
+                    className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all relative"
                 >
-                    <IconBell className="w-3.5 h-3.5"/>
+                    <IconBell className="w-3 h-3"/>
                     {hasNewNotifications && (
                         <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
                     )}
@@ -611,26 +617,6 @@ const AppContent = () => {
               </div>
           </div>
 
-          <div className="flex justify-center -mt-2 mb-2">
-             <div className="flex items-center gap-1.5 px-3 py-1 bg-white/50 backdrop-blur-sm rounded-full border border-slate-100/50 shadow-sm">
-                {syncStatus === 'syncing' && (
-                    <div className="w-2.5 h-2.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                )}
-                {syncStatus === 'synced' && (
-                    <IconCloud className="w-2.5 h-2.5 text-emerald-500 opacity-60" />
-                )}
-                {syncStatus === 'offline' && (
-                    <IconCloudOff className="w-2.5 h-2.5 text-slate-300" />
-                )}
-                {syncStatus === 'error' && (
-                    <IconCloudOff className="w-2.5 h-2.5 text-red-400" />
-                )}
-                <span className="text-[6px] font-black text-slate-400 uppercase tracking-[2px]">
-                    {syncStatus === 'syncing' ? 'Sincronizando' : syncStatus === 'synced' ? 'Nuvem OK' : syncStatus === 'offline' ? 'Offline' : 'Erro Sync'}
-                </span>
-             </div>
-          </div>
-
           <EquipmentSection 
             category={activeCategory} 
             items={collapsedCategories[activeCategory] 
@@ -651,6 +637,7 @@ const AppContent = () => {
             selectedForDelete={selectedForDelete}
             onToggleSelect={(id: string) => setSelectedForDelete(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
             isChristmas={isChristmas}
+            syncStatus={syncStatus}
           />
 
           {collapsedCategories[activeCategory] && currentDayData[activeCategory].filter(isItemActive).length > 0 && (
@@ -1048,13 +1035,11 @@ const CountBadge = ({ count }: { count: number }) => {
     const [isAnimating, setIsAnimating] = useState(false);
 
     useEffect(() => {
-        if (count > prevCount) {
+        if (count !== prevCount) {
             setIsAnimating(true);
-            const timer = setTimeout(() => setIsAnimating(false), 800);
+            const timer = setTimeout(() => setIsAnimating(false), 400);
             setPrevCount(count);
             return () => clearTimeout(timer);
-        } else if (count < prevCount) {
-            setPrevCount(count);
         }
     }, [count, prevCount]);
 
@@ -1063,7 +1048,7 @@ const CountBadge = ({ count }: { count: number }) => {
     return (
         <div className={`absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full flex items-center justify-center font-black text-[7px] transition-all duration-300 ${
             isAnimating 
-            ? 'bg-green-400 text-white shadow-[0_0_12px_#4ade80] scale-125 z-10' 
+            ? 'bg-green-400 text-white shadow-[0_0_12px_#4ade80] scale-110 z-10' 
             : 'bg-green-500 text-white shadow-sm'
         }`}>
             {count}
@@ -1071,7 +1056,9 @@ const CountBadge = ({ count }: { count: number }) => {
     );
 };
 
-const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas }: any) => {
+const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas, syncStatus }: any) => {
+    const serialRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
+
     // Ordenar itens: preenchidos primeiro (por hora), em branco por último
     const sortedItems = [...items].sort((a, b) => {
         const aActive = isItemActive(a);
@@ -1112,7 +1099,15 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                                                 type="number" 
                                                 placeholder="CONTRATO" 
                                                 value={item.contract} 
-                                                onChange={e => e.target.value.length <= 10 && onUpdate({...item, contract: e.target.value})} 
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (val.length <= 10) {
+                                                        onUpdate({...item, contract: val});
+                                                        if (val.length === 10) {
+                                                            serialRefs.current[item.id]?.focus();
+                                                        }
+                                                    }
+                                                }} 
                                                 className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm"
                                             />
                                         </div>
@@ -1122,6 +1117,7 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                                     <div className="flex flex-col gap-1 flex-1">
                                         <div className="relative">
                                             <input 
+                                                ref={el => serialRefs.current[item.id] = el}
                                                 type="text" 
                                                 placeholder="SERIAL" 
                                                 value={item.serial} 
@@ -1149,6 +1145,26 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                     </div>
                 </div>
             ))}
+
+            <div className="flex justify-center mt-4">
+                <div className="flex items-center gap-1.5 px-3 py-1 bg-white/50 backdrop-blur-sm rounded-full border border-slate-100/50 shadow-sm">
+                    {syncStatus === 'syncing' && (
+                        <div className="w-2.5 h-2.5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    )}
+                    {syncStatus === 'synced' && (
+                        <IconCloud className="w-2.5 h-2.5 text-emerald-500 opacity-60" />
+                    )}
+                    {syncStatus === 'offline' && (
+                        <IconCloudOff className="w-2.5 h-2.5 text-slate-300" />
+                    )}
+                    {syncStatus === 'error' && (
+                        <IconCloudOff className="w-2.5 h-2.5 text-red-400" />
+                    )}
+                    <span className="text-[6px] font-black text-slate-400 uppercase tracking-[2px]">
+                        {syncStatus === 'syncing' ? 'Sincronizando' : syncStatus === 'synced' ? 'Nuvem OK' : syncStatus === 'offline' ? 'Offline' : 'Erro Sync'}
+                    </span>
+                </div>
+            </div>
         </div>
     );
 };
