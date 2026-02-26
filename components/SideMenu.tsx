@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { IconCalendar, IconExport, IconSettings, IconInfo, IconX, CustomMenuIcon, IconCloud, IconCloudOff } from './icons';
+import { IconCalendar, IconExport, IconSettings, IconInfo, IconX, CustomMenuIcon } from './icons';
 import { UserProfile } from '../types';
 
 interface SideMenuProps {
@@ -9,10 +9,9 @@ interface SideMenuProps {
   onMenuClick: (modalName: string) => void;
   userProfile?: UserProfile;
   isChristmas?: boolean;
-  syncStatus?: 'synced' | 'syncing' | 'offline' | 'error';
 }
 
-export const SideMenu = ({ isOpen, onClose, onMenuClick, userProfile, isChristmas, syncStatus }: SideMenuProps) => {
+export const SideMenu = ({ isOpen, onClose, onMenuClick, userProfile, isChristmas }: SideMenuProps) => {
 
   const menuItems = [
     { label: 'Calendário', icon: IconCalendar, modal: 'calendar' },
@@ -75,25 +74,6 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick, userProfile, isChristma
           </nav>
 
           <div className="pt-8 text-center flex flex-col items-center gap-4">
-             {syncStatus && (
-               <div className="flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100">
-                  {syncStatus === 'syncing' && (
-                      <div className="w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  )}
-                  {syncStatus === 'synced' && (
-                      <IconCloud className="w-3 h-3 text-emerald-500 opacity-60" />
-                  )}
-                  {syncStatus === 'offline' && (
-                      <IconCloudOff className="w-3 h-3 text-slate-300" />
-                  )}
-                  {syncStatus === 'error' && (
-                      <IconCloudOff className="w-3 h-3 text-red-400" />
-                  )}
-                  <span className="text-[7px] font-black text-slate-400 uppercase tracking-[2px]">
-                      {syncStatus === 'syncing' ? 'Sincronizando' : syncStatus === 'synced' ? 'Nuvem OK' : syncStatus === 'offline' ? 'Offline' : 'Erro Sync'}
-                  </span>
-               </div>
-             )}
              <p className={`text-[10px] ${isChristmas ? 'text-emerald-900' : 'text-slate-400'} font-black uppercase tracking-[10px] opacity-40`}>
                Leo Luz
              </p>
