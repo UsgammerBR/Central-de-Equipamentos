@@ -549,7 +549,7 @@ const AppContent = () => {
             <div className="flex gap-2 items-center">
                 <button 
                     onClick={handleAddItem} 
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-95 shadow-[0_4px_0_#2563eb,0_8px_16px_rgba(37,99,235,0.3)] active:shadow-none active:translate-y-[2px] transition-all"
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-90 shadow-[0_4px_0_#2563eb,0_8px_16px_rgba(37,99,235,0.3)] active:shadow-none active:translate-y-[4px] transition-all duration-75"
                 >
                     <IconPlus className="w-3.5 h-3.5"/>
                 </button>
@@ -566,18 +566,18 @@ const AppContent = () => {
                             setDeleteMode(true);
                         }
                     }} 
-                    className={`w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 transition-all active:translate-y-[2px] ${deleteMode ? 'bg-red-500 text-white border-red-400 shadow-[0_4px_0_#dc2626,0_8px_16px_rgba(220,38,38,0.3)] active:shadow-none' : 'bg-white text-slate-600 border-slate-200 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none'}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center border active:scale-90 transition-all duration-75 active:translate-y-[4px] ${deleteMode ? 'bg-red-500 text-white border-red-400 shadow-[0_4px_0_#dc2626,0_8px_16px_rgba(220,38,38,0.3)] active:shadow-none' : 'bg-white text-slate-600 border-slate-200 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none'}`}
                 >
                     {deleteMode && selectedForDelete.length > 0 ? <IconTrash className="w-3.5 h-3.5"/> : <IconMinus className="w-3.5 h-3.5"/>}
                 </button>
                 <button 
                     onClick={handleUndo} 
                     disabled={!deleteMode && history.length === 0}
-                    className={`w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-90 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[4px] transition-all duration-75 ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
                 >
                     <IconUndo className="w-3.5 h-3.5"/>
                 </button>
-                <button onClick={() => setActiveModal('search')} className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all">
+                <button onClick={() => setActiveModal('search')} className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-90 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[4px] transition-all duration-75">
                     <IconSearch className="w-3.5 h-3.5"/>
                 </button>
                 <button 
@@ -585,7 +585,7 @@ const AppContent = () => {
                         setActiveModal('notifications');
                         setHasNewNotifications(false);
                     }}
-                    className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all relative"
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-90 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[4px] transition-all duration-75 relative"
                 >
                     <IconBell className="w-3.5 h-3.5"/>
                     {hasNewNotifications && (
@@ -641,10 +641,10 @@ const AppContent = () => {
       <main className="flex-1 px-4 space-y-4 mt-6 pb-48 relative z-10">
           <div 
             onClick={() => setCollapsedCategories(prev => ({ ...prev, [activeCategory]: !prev[activeCategory] }))}
-            className={`flex items-center justify-between px-6 py-3.5 rounded-[1.5rem] shadow-lg transition-all duration-500 cursor-pointer active:scale-[0.98] mb-4 ${
+            className={`flex items-center justify-between px-6 py-2 rounded-full shadow-lg transition-all duration-500 cursor-pointer active:scale-[0.98] mb-4 border ${
                 collapsedCategories[activeCategory] 
-                ? 'bg-white border border-slate-100' 
-                : 'bg-gradient-to-r from-blue-600 to-blue-400 text-white'
+                ? 'bg-white border-slate-100' 
+                : 'bg-linear-to-r from-blue-700 via-blue-600 to-blue-500 text-white border-blue-400'
             }`}
           >
               <div className="flex items-center gap-3">
@@ -896,13 +896,17 @@ const AppContent = () => {
                                     }} 
                                     className={`h-9 rounded-xl font-black text-[10px] transition-all relative flex flex-col items-center justify-center ${
                                         isSelected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 
-                                        holiday ? 'bg-amber-100 border border-amber-300 text-amber-700 shadow-sm' :
+                                        holiday?.type === 'feriado' ? 'bg-amber-100 border border-amber-300 text-amber-700 shadow-sm' :
+                                        holiday?.type === 'comemorativa' ? 'bg-pink-50 border border-pink-200 text-pink-600 shadow-sm' :
                                         isToday ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400 active:bg-slate-100'
                                     }`}
                                 >
                                     <span>{day}</span>
+                                    {hasActivity && (
+                                        <div className={`absolute inset-0 rounded-xl border-2 pointer-events-none ${isSelected ? 'border-white/40' : 'border-cyan-500/30 bg-cyan-500/5'}`} />
+                                    )}
                                     {hasActivity && !isSelected && (
-                                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-cyan-500" />
+                                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-cyan-500 shadow-[0_0_5px_rgba(6,182,212,0.5)]" />
                                     )}
                                 </button>
                               );
