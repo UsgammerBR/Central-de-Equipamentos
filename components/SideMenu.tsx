@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { IconCalendar, IconExport, IconSettings, IconInfo, IconX, CustomMenuIcon } from './icons';
+import { IconCalendar, IconExport, IconSettings, IconInfo, IconX, CustomMenuIcon, IconChevronRight } from './icons';
 import { UserProfile } from '../types';
 
 interface SideMenuProps {
@@ -56,19 +56,25 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick, userProfile, isChristma
             <div className="h-1 w-12 bg-blue-600 mt-4 rounded-full"></div>
           </div>
 
-          <nav className="flex flex-col gap-2 flex-1">
+          <nav className="flex flex-col gap-3 flex-1">
             {menuItems.map(item => (
               <button 
                 key={item.label}
                 onClick={() => { onMenuClick(item.modal); onClose(); }} 
-                className="flex items-center gap-4 p-4 rounded-[1.8rem] hover:bg-slate-50 transition-all text-left active:scale-95 group"
+                className="flex items-center gap-4 p-4 rounded-[2rem] bg-slate-50 border border-slate-100/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all text-left active:scale-95 group relative overflow-hidden"
               >
-                <div className={`w-12 h-12 rounded-2xl ${isChristmas ? 'bg-emerald-500/10 text-emerald-600' : 'bg-slate-100 text-blue-600'} flex items-center justify-center group-hover:scale-110 transition-all border border-slate-100`}>
+                <div className={`w-12 h-12 rounded-2xl ${isChristmas ? 'bg-emerald-500/10 text-emerald-600' : 'bg-white text-blue-600'} flex items-center justify-center group-hover:scale-110 transition-all border border-slate-100 shadow-sm`}>
                     <item.icon className="w-5 h-5" />
                 </div>
-                <span className={`font-black uppercase text-[9px] tracking-[4px] ${isChristmas ? 'text-emerald-900' : 'text-slate-700'}`}>
-                  {item.label}
-                </span>
+                <div className="flex flex-col">
+                    <span className={`font-black uppercase text-[10px] tracking-[2px] ${isChristmas ? 'text-emerald-900' : 'text-slate-800'}`}>
+                      {item.label}
+                    </span>
+                    <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest opacity-60">Acessar {item.label.toLowerCase()}</span>
+                </div>
+                <div className="absolute right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <IconChevronRight className="w-4 h-4 text-slate-300"/>
+                </div>
               </button>
             ))}
           </nav>

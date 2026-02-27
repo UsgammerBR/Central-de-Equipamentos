@@ -10,82 +10,45 @@ export const CATEGORIES: EquipmentCategory[] = [
 ];
 
 export const HOLIDAYS_SP: Record<string, { name: string; icon: string; color: string; description: string }> = {
-  "01-01": { 
-    name: "Ano Novo", 
-    icon: "🎆", 
-    color: "bg-blue-400",
-    description: "Celebração universal do início do calendário gregoriano, simbolizando renovação e esperança."
-  },
-  "01-25": { 
-    name: "Aniversário de SP", 
-    icon: "🏙️", 
-    color: "bg-sky-500",
-    description: "Comemora a fundação da cidade de São Paulo em 1554, iniciada com uma missa no Pátio do Colégio."
-  },
-  "03-04": { 
-    name: "Carnaval", 
-    icon: "🎭", 
-    color: "bg-purple-500",
-    description: "A maior festa popular do Brasil, marcada por desfiles, blocos de rua e manifestações culturais diversas."
-  },
-  "04-18": { 
-    name: "Sexta-feira Santa", 
-    icon: "✝️", 
-    color: "bg-amber-600",
-    description: "Data religiosa cristã que relembra a crucificação de Jesus Cristo e sua morte no Calvário."
-  },
-  "04-21": { 
-    name: "Tiradentes", 
-    icon: "🦷", 
-    color: "bg-red-500",
-    description: "Homenagem a Joaquim José da Silva Xavier, mártir da Inconfidência Mineira e patrono cívico do Brasil."
-  },
-  "05-01": { 
-    name: "Dia do Trabalho", 
-    icon: "🛠️", 
-    color: "bg-orange-500",
-    description: "Homenagem às conquistas históricas dos trabalhadores e à luta por direitos e melhores condições."
-  },
-  "07-09": { 
-    name: "Revolução de 1932", 
-    icon: "🎖️", 
-    color: "bg-slate-700",
-    description: "Recorda o levante constitucionalista do estado de São Paulo contra o governo de Getúlio Vargas."
-  },
-  "09-07": { 
-    name: "Independência", 
-    icon: "🇧🇷", 
-    color: "bg-green-600",
-    description: "Marco da emancipação política do Brasil em relação a Portugal, ocorrida em 1822 às margens do Ipiranga."
-  },
-  "10-12": { 
-    name: "Nossa Sra. Aparecida", 
-    icon: "🙏", 
-    color: "bg-blue-600",
-    description: "Dia da Padroeira do Brasil, data de profunda devoção religiosa e também celebração do Dia das Crianças."
-  },
-  "11-02": { 
-    name: "Finados", 
-    icon: "🕯️", 
-    color: "bg-gray-600",
-    description: "Dia dedicado à memória e respeito aos entes queridos que já faleceram."
-  },
-  "11-15": { 
-    name: "Proclamação da República", 
-    icon: "⚖️", 
-    color: "bg-emerald-600",
-    description: "Celebra o fim do período imperial e o início do regime republicano no Brasil em 1889."
-  },
-  "11-20": { 
-    name: "Consciência Negra", 
-    icon: "✊🏿", 
-    color: "bg-yellow-800",
-    description: "Reflexão sobre a inserção do negro na sociedade brasileira e homenagem a Zumbi dos Palmares."
-  },
-  "12-25": { 
-    name: "Natal", 
-    icon: "🎄", 
-    color: "bg-red-600",
-    description: "Celebração do nascimento de Jesus Cristo, marcada pelo espírito de união, presentes e confraternização familiar."
-  }
+  // Nacionais Fixos
+  "01-01": { name: "Confraternização Universal", icon: "🎆", color: "bg-blue-400", description: "Início do ano civil, feriado nacional." },
+  "21-04": { name: "Tiradentes", icon: "🦷", color: "bg-red-500", description: "Homenagem ao mártir da Inconfidência Mineira." },
+  "01-05": { name: "Dia do Trabalho", icon: "🛠️", color: "bg-orange-500", description: "Dia Internacional dos Trabalhadores." },
+  "07-09": { name: "Independência do Brasil", icon: "🇧🇷", color: "bg-green-600", description: "Proclamação da Independência (1822)." },
+  "12-10": { name: "Nossa Senhora Aparecida", icon: "🙏", color: "bg-blue-600", description: "Padroeira do Brasil e Dia das Crianças." },
+  "02-11": { name: "Finados", icon: "🕯️", color: "bg-gray-600", description: "Dia de memória aos mortos." },
+  "15-11": { name: "Proclamação da República", icon: "⚖️", color: "bg-emerald-600", description: "Proclamação da República (1889)." },
+  "20-11": { name: "Consciência Negra", icon: "✊🏿", color: "bg-yellow-800", description: "Dia Nacional de Zumbi e da Consciência Negra." },
+  "25-12": { name: "Natal", icon: "🎄", color: "bg-red-600", description: "Celebração do nascimento de Jesus." },
+
+  // Móveis 2026
+  "17-02": { name: "Carnaval", icon: "🎭", color: "bg-purple-500", description: "Terça-feira de Carnaval." },
+  "03-04": { name: "Sexta-feira Santa", icon: "✝️", color: "bg-amber-600", description: "Paixão de Cristo." },
+  "05-04": { name: "Páscoa", icon: "🐰", color: "bg-blue-300", description: "Celebração da Ressurreição." },
+  "04-06": { name: "Corpus Christi", icon: "🍷", color: "bg-amber-500", description: "Feriado religioso municipal em SP." },
+
+  // Estadual SP
+  "09-07": { name: "Revolução Constitucionalista", icon: "🎖️", color: "bg-slate-700", description: "Data Magna do Estado de São Paulo." },
+
+  // Municipais SP (Exemplos fornecidos)
+  "25-01": { name: "Aniversário de SP", icon: "🏙️", color: "bg-sky-500", description: "Fundação da cidade de São Paulo." },
+  "15-08": { name: "Adamantina - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Adamantina." },
+  "25-10": { name: "Aguaí - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Aguaí." },
+  "16-11": { name: "Águas de Lindóia - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Águas de Lindóia." },
+  "27-06": { name: "Americana - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Americana." },
+  "08-04": { name: "Amparo - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Amparo." },
+  "13-07": { name: "Andradina - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Andradina." },
+  "02-12": { name: "Araçatuba - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Araçatuba." },
+  "22-08": { name: "Araraquara - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Araraquara." },
+  "24-03": { name: "Araras - Aniversário", icon: "🎂", color: "bg-indigo-400", description: "Feriado Municipal em Araras." },
+
+  // Datas Comemorativas Adicionais
+  "08-03": { name: "Dia da Mulher", icon: "👩", color: "bg-pink-400", description: "Dia Internacional da Mulher." },
+  "10-05": { name: "Dia das Mães", icon: "❤️", color: "bg-pink-500", description: "Homenagem às mães." },
+  "12-06": { name: "Dia dos Namorados", icon: "💘", color: "bg-rose-400", description: "Celebração do amor." },
+  "09-08": { name: "Dia dos Pais", icon: "👔", color: "bg-indigo-500", description: "Homenagem aos pais." },
+  "15-10": { name: "Dia dos Professores", icon: "👨‍🏫", color: "bg-emerald-500", description: "Homenagem aos professores." },
+  "18-10": { name: "Dia do Médico", icon: "🩺", color: "bg-cyan-600", description: "Homenagem aos médicos." },
+  "23-10": { name: "Dia do Aviador", icon: "✈️", color: "bg-sky-400", description: "Homenagem aos aviadores." },
+  "28-10": { name: "Dia do Servidor Público", icon: "🏢", color: "bg-slate-500", description: "Homenagem aos servidores." }
 };

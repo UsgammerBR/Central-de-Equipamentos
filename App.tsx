@@ -68,12 +68,21 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
     report += `RESUMO DE TOTAIS DO MÊS\n`;
     report += `============================\n`;
     CATEGORIES.forEach(cat => {
-        const label = cat.toUpperCase().padEnd(12, ' ');
-        report += `${label} | ${totals[cat]}\n`;
+        report += `${cat}; ${totals[cat]}\n`;
     });
     report += `============================\n`;
     
     return report;
+};
+
+const downloadReport = (report: string, filename: string) => {
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 };
 
 type Action =
@@ -230,6 +239,7 @@ const AppContent = () => {
   const [deleteMode, setDeleteMode] = useState(false);
   const [selectedForDelete, setSelectedForDelete] = useState<string[]>([]);
   const [history, setHistory] = useState<AppData[]>([]);
+  const [focusedInput, setFocusedInput] = useState<{ itemId: string, field: 'contract' | 'serial' } | null>(null);
   const [showAllTimeTotals, setShowAllTimeTotals] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
@@ -238,6 +248,7 @@ const AppContent = () => {
   });
   const [searchQuery, setSearchQuery] = useState('');
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'offline' | 'error'>('synced');
+  const [holidayModal, setHolidayModal] = useState<{ name: string, icon: string, description: string } | null>(null);
   
   const isChristmas = isChristmasPeriod();
   const formattedDate = getFormattedDate(currentDate);
@@ -289,18 +300,31 @@ const AppContent = () => {
         
         setSyncStatus('syncing');
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
             const response = await fetch('/api/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(appData)
+                body: JSON.stringify(appData),
+                signal: controller.signal
             });
             
+            clearTimeout(timeoutId);
+
             if (response.ok) {
                 setSyncStatus('synced');
             } else {
+                const errData = await response.json().catch(() => ({}));
+                console.error("Sync error response:", errData);
                 setSyncStatus('error');
             }
         } catch (err) {
+            if (err instanceof Error && err.name === 'AbortError') {
+                console.error("Sync timeout");
+            } else {
+                console.error("Sync fetch error:", err);
+            }
             setSyncStatus('error');
         }
     };
@@ -332,11 +356,28 @@ const AppContent = () => {
         setSelectedForDelete([]);
         return;
     }
+    
+    // Se houver um campo focado, limpa o conteúdo dele em vez de desfazer o estado global
+    if (focusedInput) {
+        const { itemId, field } = focusedInput;
+        const item = currentDayData[activeCategory].find(i => i.id === itemId);
+        if (item) {
+            onUpdateItem({ ...item, [field]: '' });
+            addNotification('Limpar', `Campo ${field === 'contract' ? 'Contrato' : 'Serial'} limpo`);
+            return;
+        }
+    }
+
     if (history.length > 0) {
         const lastState = history[history.length - 1];
         dispatch({ type: 'SET_DATA', payload: lastState });
         setHistory(prev => prev.slice(0, -1));
+        addNotification('Desfazer', 'Ação desfeita com sucesso');
     }
+  };
+
+  const onUpdateItem = (item: EquipmentItem) => {
+    dispatch({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category: activeCategory, item } });
   };
 
   const addToHistory = (state: AppData) => {
@@ -363,11 +404,12 @@ const AppContent = () => {
   const somaTotalGeral = useMemo(() => {
     const currentMonth = currentDate.getMonth();
     const currentYear = currentDate.getFullYear();
+    const currentDay = currentDate.getDate();
     
     return Object.entries(appData).reduce((acc: number, [dateStr, day]) => {
         if (!day) return acc;
         const d = new Date(dateStr + 'T12:00:00');
-        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+        if (d.getMonth() === currentMonth && d.getFullYear() === currentYear && d.getDate() <= currentDay) {
             const dayTotal = Object.values(day).flat().filter(isItemActive).length;
             return acc + dayTotal;
         }
@@ -440,17 +482,20 @@ const AppContent = () => {
   };
 
   if (isLoading) return (
-    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#f0f7ff] z-[100]">
+    <div className="fixed inset-0 flex flex-col items-center justify-center bg-[#f0f0f0] z-[100]">
         <LoadingBoxIcon/>
         <p className="mt-4 font-black uppercase tracking-widest text-[10px] text-slate-400 animate-pulse">Iniciando Controle...</p>
     </div>
   );
 
   return (
-    <div className="flex flex-col min-h-screen relative w-full overflow-x-hidden bg-[#f0f7ff] animate-fade-in">
+    <div className="flex flex-col min-h-screen relative w-full overflow-x-hidden bg-[#f0f0f0] animate-fade-in">
       
-      <div className="fixed inset-0 pointer-events-none opacity-40">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-slate-50"></div>
+      <div className="fixed inset-0 pointer-events-none z-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-200 via-[#f0f0f0] to-slate-100"></div>
+          <div className="absolute inset-0 opacity-[0.03] bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-400/5 blur-[120px] rounded-full animate-pulse"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-indigo-400/5 blur-[120px] rounded-full animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
 
       <SideMenu 
@@ -486,7 +531,7 @@ const AppContent = () => {
           </div>
       )}
 
-      <header className="sticky top-0 z-30 bg-white/70 backdrop-blur-xl border-b border-slate-200 px-4 pt-12 pb-4">
+      <header className="sticky top-0 z-30 bg-[#f0f0f0]/80 backdrop-blur-xl border-b border-slate-300/50 px-4 pt-12 pb-4">
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
                 <div onClick={() => setIsMenuOpen(true)} className="active:scale-95 transition-all cursor-pointer">
@@ -499,8 +544,12 @@ const AppContent = () => {
                     )}
                 </div>
                 <div className="flex flex-col">
-                    <h1 className="text-sm font-black text-slate-900 uppercase tracking-tighter">Controle</h1>
-                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[3px]">Equipamentos</span>
+                    <h1 className="text-sm font-black text-slate-900 uppercase tracking-tighter">
+                        {userProfile.name || 'Controle'}
+                    </h1>
+                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-[3px]">
+                        Equipamentos
+                    </span>
                 </div>
             </div>
             
@@ -531,7 +580,7 @@ const AppContent = () => {
                 <button 
                     onClick={handleUndo} 
                     disabled={!deleteMode && history.length === 0}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
+                    className={`w-7 h-7 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
                 >
                     <IconUndo className="w-3 h-3"/>
                 </button>
@@ -554,21 +603,24 @@ const AppContent = () => {
         </div>
 
         <div className="flex flex-col items-center mb-6 relative gap-2">
-            <button onClick={() => setActiveModal('calendar')} className="flex items-center gap-2 px-6 py-2 rounded-full bg-slate-100 border border-slate-200 active:scale-95 transition-all shadow-sm">
-                {currentHoliday && <span className="text-sm mr-1">{currentHoliday.icon}</span>}
-                <span className="font-black text-[12px] tracking-[2px] text-slate-700">
-                    {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                </span>
-                <IconChevronDown className="w-3 h-3 text-slate-400"/>
-            </button>
-
-            {currentHoliday && (
-                <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap">
-                    <span className={`text-[7px] font-black uppercase tracking-[2px] ${currentHoliday.color.replace('bg-', 'text-')}`}>
-                        {currentHoliday.name}
+            <div className="flex items-center gap-2">
+                {currentHoliday && (
+                    <button 
+                        onClick={() => setHolidayModal(currentHoliday)}
+                        className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-slate-200 shadow-xl active:scale-90 transition-all animate-bounce group"
+                    >
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border border-white shadow-inner ${currentHoliday.color}`}>
+                            <span className="text-sm drop-shadow-sm">{currentHoliday.icon}</span>
+                        </div>
+                    </button>
+                )}
+                <button onClick={() => setActiveModal('calendar')} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 active:scale-95 transition-all shadow-sm">
+                    <IconCalendar className="w-3.5 h-3.5 text-blue-600"/>
+                    <span className="font-black text-[10px] tracking-[2px] text-slate-700">
+                        {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </span>
-                </div>
-            )}
+                </button>
+            </div>
         </div>
 
         {/* Seletor de Categorias Horizontal */}
@@ -586,7 +638,7 @@ const AppContent = () => {
                                 <Icon className="w-4 h-4"/>
                             </div>
                             <span className="text-[6px] font-black uppercase tracking-[1px] whitespace-nowrap">{cat}</span>
-                            <CountBadge count={appData[formattedDate]?.[cat]?.filter(isItemActive).length || 0} />
+                            <CountBadge count={appData[formattedDate]?.[cat]?.filter(isItemActive).length || 0} data={appData[formattedDate]?.[cat]} />
                         </button>
                     );
                 })}
@@ -625,7 +677,7 @@ const AppContent = () => {
             } 
             onUpdate={(item: any) => {
                 addToHistory(appData);
-                dispatch({ type: 'UPDATE_ITEM', payload: { date: formattedDate, category: activeCategory, item } });
+                onUpdateItem(item);
             }}
             onDelete={(id: string) => {
                 addToHistory(appData);
@@ -638,6 +690,7 @@ const AppContent = () => {
             onToggleSelect={(id: string) => setSelectedForDelete(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])}
             isChristmas={isChristmas}
             syncStatus={syncStatus}
+            onFocusInput={(itemId: string, field: 'contract' | 'serial') => setFocusedInput({ itemId, field })}
           />
 
           {collapsedCategories[activeCategory] && currentDayData[activeCategory].filter(isItemActive).length > 0 && (
@@ -689,7 +742,7 @@ const AppContent = () => {
                     className="flex flex-col items-center active:scale-95 transition-transform"
                 >
                     <span className={`text-[7px] font-black uppercase tracking-widest mb-1 transition-colors ${showAllTimeTotals ? 'text-purple-600' : 'text-purple-400'}`}>
-                        {showAllTimeTotals ? 'Voltar' : 'Mês'}
+                        {showAllTimeTotals ? 'Dia' : 'Mês'}
                     </span>
                     <div className={`rounded-2xl px-5 py-2.5 border transition-all duration-500 ${showAllTimeTotals ? 'bg-purple-600 text-white border-purple-400 shadow-[0_5px_15px_rgba(168,85,247,0.3)]' : 'bg-purple-50 text-purple-600 border-purple-200 shadow-sm backdrop-blur-xl'}`}>
                         <span className="text-xl font-black leading-none">
@@ -700,6 +753,26 @@ const AppContent = () => {
               </div>
           </div>
       </footer>
+
+      {holidayModal && (
+          <Modal title={holidayModal.name} onClose={() => setHolidayModal(null)}>
+              <div className="text-center py-6">
+                  <div className="text-6xl mb-6 animate-bounce">{holidayModal.icon}</div>
+                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-4">{holidayModal.name}</h3>
+                  <div className="bg-slate-50 p-6 rounded-[2rem] border border-slate-100">
+                      <p className="text-[11px] font-black text-slate-600 uppercase leading-relaxed tracking-widest">
+                          {holidayModal.description}
+                      </p>
+                  </div>
+                  <button 
+                    onClick={() => setHolidayModal(null)}
+                    className="mt-8 w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-lg shadow-blue-600/20"
+                  >
+                      Entendido
+                  </button>
+              </div>
+          </Modal>
+      )}
 
       {galleryItem && <PhotoGalleryModal item={galleryItem} onClose={() => setGalleryItem(null)} />}
       
@@ -775,36 +848,36 @@ const AppContent = () => {
       )}
 
       {activeModal === 'calendar' && (
-          <Modal title="Selecionar Data" onClose={() => setActiveModal(null)}>
-              <div className="space-y-6">
-                  <div className="flex items-center justify-between px-2">
+          <Modal title="Calendário" onClose={() => setActiveModal(null)}>
+              <div className="p-2">
+                  <div className="flex items-center justify-between mb-4 px-2">
                       <button 
                         onClick={() => {
                             const d = new Date(currentDate);
                             d.setMonth(d.getMonth() - 1);
                             setCurrentDate(d);
                         }}
-                        className="p-2 rounded-xl bg-white/5 text-white active:scale-95 transition-all"
+                        className="p-2 rounded-xl bg-slate-50 active:scale-90 transition-all"
                       >
-                          <IconChevronLeft className="w-5 h-5"/>
+                          <IconChevronLeft className="w-4 h-4 text-slate-400"/>
                       </button>
-                      <span className="font-black uppercase text-[10px] tracking-[4px] text-white">
+                      <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[3px]">
                           {currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}
-                      </span>
+                      </h3>
                       <button 
                         onClick={() => {
                             const d = new Date(currentDate);
                             d.setMonth(d.getMonth() + 1);
                             setCurrentDate(d);
                         }}
-                        className="p-2 rounded-xl bg-white/5 text-white active:scale-95 transition-all"
+                        className="p-2 rounded-xl bg-slate-50 active:scale-90 transition-all"
                       >
-                          <IconChevronRight className="w-5 h-5"/>
+                          <IconChevronRight className="w-4 h-4 text-slate-400"/>
                       </button>
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-1">
                       {['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map(d => (
-                          <div key={d} className="h-8 flex items-center justify-center text-[8px] font-black text-slate-600">{d}</div>
+                          <div key={d} className="h-6 flex items-center justify-center text-[7px] font-black text-slate-400">{d}</div>
                       ))}
                       {(() => {
                           const year = currentDate.getFullYear();
@@ -815,8 +888,13 @@ const AppContent = () => {
                           for (let i = 0; i < firstDay; i++) days.push(<div key={`empty-${i}`} />);
                           for (let day = 1; day <= daysInMonth; day++) {
                               const d = new Date(year, month, day);
-                              const isToday = getFormattedDate(new Date()) === getFormattedDate(d);
-                              const isSelected = getFormattedDate(currentDate) === getFormattedDate(d);
+                              const dateStr = getFormattedDate(d);
+                              const isToday = getFormattedDate(new Date()) === dateStr;
+                              const isSelected = getFormattedDate(currentDate) === dateStr;
+                              const dayMonth = `${String(day).padStart(2, '0')}-${String(month + 1).padStart(2, '0')}`;
+                              const holiday = HOLIDAYS_SP[dayMonth];
+                              const hasActivity = appData[dateStr] && Object.values(appData[dateStr]).flat().some(isItemActive);
+
                               days.push(
                                 <button 
                                     key={day} 
@@ -824,14 +902,15 @@ const AppContent = () => {
                                         setCurrentDate(d);
                                         setActiveModal(null);
                                     }} 
-                                    className={`h-10 rounded-xl font-black text-[10px] transition-all relative ${
+                                    className={`h-9 rounded-xl font-black text-[10px] transition-all relative flex flex-col items-center justify-center ${
                                         isSelected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 
-                                        isToday ? 'bg-white/10 text-blue-400' : 'bg-white/5 text-slate-400 active:bg-white/10'
+                                        holiday ? 'bg-amber-100 border border-amber-300 text-amber-700 shadow-sm' :
+                                        isToday ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400 active:bg-slate-100'
                                     }`}
                                 >
-                                    {day}
-                                    {appData[getFormattedDate(d)] && !isSelected && (
-                                        <div className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-cyan-500" />
+                                    <span>{day}</span>
+                                    {hasActivity && !isSelected && (
+                                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-cyan-500" />
                                     )}
                                 </button>
                               );
@@ -871,7 +950,7 @@ const AppContent = () => {
                             type="text" 
                             value={userProfile.name} 
                             onChange={e => setUserProfile({...userProfile, name: e.target.value})}
-                            className="w-full py-4 px-6 rounded-2xl bg-white/5 border-none outline-none font-black text-sm text-white focus:bg-white/10 transition-all"
+                            className="w-full py-4 px-6 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-black text-sm text-slate-900 focus:bg-white focus:border-blue-200 transition-all"
                             placeholder="Ex: Leo Luz"
                           />
                       </div>
@@ -881,7 +960,7 @@ const AppContent = () => {
                             type="text" 
                             value={userProfile.cpf || ''} 
                             onChange={e => setUserProfile({...userProfile, cpf: e.target.value})}
-                            className="w-full py-4 px-6 rounded-2xl bg-white/5 border-none outline-none font-black text-sm text-white focus:bg-white/10 transition-all"
+                            className="w-full py-4 px-6 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-black text-sm text-slate-900 focus:bg-white focus:border-blue-200 transition-all"
                             placeholder="000.000.000-00"
                           />
                       </div>
@@ -967,7 +1046,7 @@ const AppContent = () => {
                       <button 
                         onClick={() => {
                             const text = generateMonthlyReport(appData, currentDate);
-                            window.open(`https://t.me/share/url?url=${encodeURIComponent(window.location.href)}&text=${encodeURIComponent(text)}`);
+                            window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(text)}`);
                         }}
                         className="py-4 bg-sky-600/10 border border-sky-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
                       >
@@ -975,13 +1054,12 @@ const AppContent = () => {
                       </button>
                       <button 
                         onClick={() => {
-                            const subject = `Relatório de Equipamentos - ${currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`;
-                            const body = generateMonthlyReport(appData, currentDate);
-                            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                            const text = generateMonthlyReport(appData, currentDate);
+                            downloadReport(text, `relatorio_mensal_${currentDate.getMonth() + 1}_${currentDate.getFullYear()}.txt`);
                         }}
                         className="py-4 bg-slate-600/10 border border-slate-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
                       >
-                          <IconEmail className="w-5 h-5 text-slate-400"/>
+                          <IconFileExcel className="w-5 h-5 text-slate-500"/>
                       </button>
                   </div>
               </div>
@@ -1030,34 +1108,52 @@ const AppContent = () => {
   );
 };
 
-const CountBadge = ({ count }: { count: number }) => {
-    const [prevCount, setPrevCount] = useState(count);
+const CountBadge = ({ count, data }: { count: number, data?: any }) => {
     const [isAnimating, setIsAnimating] = useState(false);
+    const lastDataRef = useRef(JSON.stringify(data));
 
     useEffect(() => {
-        if (count !== prevCount) {
+        const currentDataStr = JSON.stringify(data);
+        if (currentDataStr !== lastDataRef.current) {
             setIsAnimating(true);
-            const timer = setTimeout(() => setIsAnimating(false), 400);
-            setPrevCount(count);
+            const timer = setTimeout(() => setIsAnimating(false), 600);
+            lastDataRef.current = currentDataStr;
             return () => clearTimeout(timer);
         }
-    }, [count, prevCount]);
+    }, [data]);
 
     if (count === 0) return null;
 
     return (
-        <div className={`absolute -top-1 -right-1 min-w-[14px] h-[14px] px-1 rounded-full flex items-center justify-center font-black text-[7px] transition-all duration-300 ${
+        <div className={`absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center font-black text-[8px] transition-all duration-500 border border-white shadow-md ${
             isAnimating 
-            ? 'bg-green-400 text-white shadow-[0_0_12px_#4ade80] scale-110 z-10' 
-            : 'bg-green-500 text-white shadow-sm'
+            ? 'bg-[#4ade80] text-white shadow-[0_0_20px_#4ade80,0_0_10px_#4ade80] scale-125 z-10' 
+            : 'bg-[#ff3b30] text-white'
         }`}>
             {count}
         </div>
     );
 };
 
-const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas, syncStatus }: any) => {
+const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas, syncStatus, onFocusInput }: any) => {
     const serialRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
+    const inactivityTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    const resetInactivityTimer = (inputEl: HTMLInputElement | null) => {
+        if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        inactivityTimerRef.current = setTimeout(() => {
+            if (inputEl) {
+                inputEl.blur();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }, 2000);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+        };
+    }, []);
 
     // Ordenar itens: preenchidos primeiro (por hora), em branco por último
     const sortedItems = [...items].sort((a, b) => {
@@ -1072,7 +1168,7 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
         <div className="space-y-2">
             {sortedItems.map((item: any) => (
                 <div key={item.id} className="flex gap-1.5 animate-fade-in">
-                    <div className={`flex-1 p-2 rounded-[1.2rem] border shadow-sm flex flex-col gap-2 transition-all duration-500 ${deleteMode && selectedForDelete?.includes(item.id) ? 'bg-red-50 border-red-100' : 'bg-white/40 border-slate-100/50 backdrop-blur-sm'}`}>
+                    <div className={`flex-1 p-2 rounded-[1.2rem] border shadow-sm flex flex-col gap-2 transition-all duration-500 ${deleteMode && selectedForDelete?.includes(item.id) ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
                         <div className="flex gap-1.5 items-center">
                             {deleteMode && (
                                 <button 
@@ -1091,14 +1187,15 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                             </div>
 
                             <div className="flex-1 flex flex-col gap-1.5">
-                                <div className="flex gap-1">
-                                    {/* Campo Contrato */}
-                                    <div className="flex flex-col gap-1 flex-[0.38]">
+                                <div className="flex gap-1 items-center">
+                                    {/* Campo Contrato - Ajustado para 10 dígitos */}
+                                    <div className="flex flex-col gap-1 w-[85px] shrink-0">
                                         <div className="relative">
                                             <input 
                                                 type="number" 
                                                 placeholder="CONTRATO" 
                                                 value={item.contract} 
+                                                onFocus={() => onFocusInput(item.id, 'contract')}
                                                 onChange={e => {
                                                     const val = e.target.value;
                                                     if (val.length <= 10) {
@@ -1113,22 +1210,38 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                                         </div>
                                     </div>
                                     
-                                    {/* Campo Serial */}
-                                    <div className="flex flex-col gap-1 flex-1">
+                                    {/* Campo Serial - Ajustado para 20 dígitos */}
+                                    <div className="flex flex-col gap-1 flex-1 min-w-0">
                                         <div className="relative">
                                             <input 
                                                 ref={el => serialRefs.current[item.id] = el}
                                                 type="text" 
                                                 placeholder="SERIAL" 
                                                 value={item.serial} 
-                                                onChange={e => e.target.value.length <= 20 && onUpdate({...item, serial: e.target.value})} 
-                                                className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm"
+                                                onFocus={(e) => {
+                                                    onFocusInput(item.id, 'serial');
+                                                    resetInactivityTimer(e.target as HTMLInputElement);
+                                                }}
+                                                onChange={e => {
+                                                    const val = e.target.value;
+                                                    if (val.length <= 20) {
+                                                        onUpdate({...item, serial: val});
+                                                        resetInactivityTimer(e.target as HTMLInputElement);
+                                                        if (val.length === 20) {
+                                                            // Recolhe teclado e sobe pro topo
+                                                            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+                                                            (e.target as HTMLInputElement).blur();
+                                                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                        }
+                                                    }
+                                                }} 
+                                                className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm truncate"
                                             />
                                         </div>
                                     </div>
 
                                     {/* Botões de Ação */}
-                                    <div className="flex gap-1">
+                                    <div className="flex gap-1 shrink-0">
                                         <button onClick={() => onCamera(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#111827] text-white active:scale-95 transition-all shadow-md">
                                             <IconCameraLens className="w-4 h-4"/>
                                         </button>
