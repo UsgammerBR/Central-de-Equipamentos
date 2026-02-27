@@ -29,7 +29,7 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick, userProfile, isChristma
         onClick={onClose}
       />
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-white shadow-[20px_0_60px_rgba(0,0,0,0.05)] z-50 transform transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) border-r ${isChristmas ? 'border-red-500/20' : 'border-slate-100'} ${
+        className={`fixed top-0 left-0 h-full w-80 bg-white/60 backdrop-blur-3xl shadow-[20px_0_60px_rgba(0,0,0,0.1)] z-50 transform transition-transform duration-500 cubic-bezier(0.16, 1, 0.3, 1) border-r ${isChristmas ? 'border-red-500/20' : 'border-white/40'} ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -61,7 +61,7 @@ export const SideMenu = ({ isOpen, onClose, onMenuClick, userProfile, isChristma
               <button 
                 key={item.label}
                 onClick={() => { onMenuClick(item.modal); onClose(); }} 
-                className="flex items-center gap-4 p-4 rounded-[2rem] bg-slate-50 border border-slate-100/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all text-left active:scale-95 group relative overflow-hidden"
+                className="flex items-center gap-4 p-4 rounded-[2rem] bg-white/50 border border-white/50 hover:bg-white hover:shadow-xl hover:shadow-slate-200/50 transition-all text-left active:scale-95 active:translate-y-[2px] group relative overflow-hidden shadow-[0_4px_0_#f1f5f9] active:shadow-none"
               >
                 <div className={`w-12 h-12 rounded-2xl ${isChristmas ? 'bg-emerald-500/10 text-emerald-600' : 'bg-white text-blue-600'} flex items-center justify-center group-hover:scale-110 transition-all border border-slate-100 shadow-sm`}>
                     <item.icon className="w-5 h-5" />

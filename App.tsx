@@ -301,7 +301,7 @@ const AppContent = () => {
         setSyncStatus('syncing');
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
 
             const response = await fetch('/api/sync', {
                 method: 'POST',
@@ -315,21 +315,14 @@ const AppContent = () => {
             if (response.ok) {
                 setSyncStatus('synced');
             } else {
-                const errData = await response.json().catch(() => ({}));
-                console.error("Sync error response:", errData);
                 setSyncStatus('error');
             }
         } catch (err) {
-            if (err instanceof Error && err.name === 'AbortError') {
-                console.error("Sync timeout");
-            } else {
-                console.error("Sync fetch error:", err);
-            }
             setSyncStatus('error');
         }
     };
 
-    const debounceTimer = setTimeout(syncWithServer, 2000);
+    const debounceTimer = setTimeout(syncWithServer, 3000);
     return () => clearTimeout(debounceTimer);
   }, [appData, isLoading]);
 
@@ -531,7 +524,7 @@ const AppContent = () => {
           </div>
       )}
 
-      <header className="sticky top-0 z-30 bg-[#f0f0f0]/80 backdrop-blur-xl border-b border-slate-300/50 px-4 pt-12 pb-4">
+      <header className="sticky top-0 z-30 bg-[#f0f0f0]/80 backdrop-blur-xl border-b border-slate-300/50 px-4 pt-8 pb-3">
         <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-3">
                 <div onClick={() => setIsMenuOpen(true)} className="active:scale-95 transition-all cursor-pointer">
@@ -556,9 +549,9 @@ const AppContent = () => {
             <div className="flex gap-2 items-center">
                 <button 
                     onClick={handleAddItem} 
-                    className="w-7 h-7 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-95 shadow-[0_2px_0_#2563eb,0_4px_8px_rgba(37,99,235,0.3)] active:shadow-none active:translate-y-[2px] transition-all"
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-linear-to-r from-blue-600 to-blue-500 text-white border border-blue-500 active:scale-95 shadow-[0_4px_0_#2563eb,0_8px_16px_rgba(37,99,235,0.3)] active:shadow-none active:translate-y-[2px] transition-all"
                 >
-                    <IconPlus className="w-3 h-3"/>
+                    <IconPlus className="w-3.5 h-3.5"/>
                 </button>
                 <button 
                     onClick={() => {
@@ -573,28 +566,28 @@ const AppContent = () => {
                             setDeleteMode(true);
                         }
                     }} 
-                    className={`w-7 h-7 rounded-full flex items-center justify-center border active:scale-95 transition-all active:translate-y-[2px] ${deleteMode ? 'bg-red-500 text-white border-red-400 shadow-[0_2px_0_#dc2626,0_4px_8px_rgba(220,38,38,0.3)] active:shadow-none' : 'bg-slate-100 text-slate-600 border-slate-200 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none'}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center border active:scale-95 transition-all active:translate-y-[2px] ${deleteMode ? 'bg-red-500 text-white border-red-400 shadow-[0_4px_0_#dc2626,0_8px_16px_rgba(220,38,38,0.3)] active:shadow-none' : 'bg-white text-slate-600 border-slate-200 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none'}`}
                 >
-                    {deleteMode && selectedForDelete.length > 0 ? <IconTrash className="w-3 h-3"/> : <IconMinus className="w-3 h-3"/>}
+                    {deleteMode && selectedForDelete.length > 0 ? <IconTrash className="w-3.5 h-3.5"/> : <IconMinus className="w-3.5 h-3.5"/>}
                 </button>
                 <button 
                     onClick={handleUndo} 
                     disabled={!deleteMode && history.length === 0}
-                    className={`w-7 h-7 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
+                    className={`w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all ${(!deleteMode && history.length === 0) ? 'opacity-30' : ''}`}
                 >
-                    <IconUndo className="w-3 h-3"/>
+                    <IconUndo className="w-3.5 h-3.5"/>
                 </button>
-                <button onClick={() => setActiveModal('search')} className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all">
-                    <IconSearch className="w-3 h-3"/>
+                <button onClick={() => setActiveModal('search')} className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all">
+                    <IconSearch className="w-3.5 h-3.5"/>
                 </button>
                 <button 
                     onClick={() => {
                         setActiveModal('notifications');
                         setHasNewNotifications(false);
                     }}
-                    className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-600 border border-slate-200 active:scale-95 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all relative"
+                    className="w-8 h-8 rounded-full flex items-center justify-center bg-white text-slate-600 border border-slate-200 active:scale-95 shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] transition-all relative"
                 >
-                    <IconBell className="w-3 h-3"/>
+                    <IconBell className="w-3.5 h-3.5"/>
                     {hasNewNotifications && (
                         <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-red-500 rounded-full border border-white"></span>
                     )}
@@ -604,22 +597,21 @@ const AppContent = () => {
 
         <div className="flex flex-col items-center mb-6 relative gap-2">
             <div className="flex items-center gap-2">
-                {currentHoliday && (
-                    <button 
-                        onClick={() => setHolidayModal(currentHoliday)}
-                        className="w-10 h-10 rounded-full flex items-center justify-center bg-white border border-slate-200 shadow-xl active:scale-90 transition-all animate-bounce group"
-                    >
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center border border-white shadow-inner ${currentHoliday.color}`}>
-                            <span className="text-sm drop-shadow-sm">{currentHoliday.icon}</span>
-                        </div>
-                    </button>
-                )}
-                <button onClick={() => setActiveModal('calendar')} className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-200 active:scale-95 transition-all shadow-sm">
-                    <IconCalendar className="w-3.5 h-3.5 text-blue-600"/>
-                    <span className="font-black text-[10px] tracking-[2px] text-slate-700">
+                <button onClick={() => setActiveModal('calendar')} className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-white border border-slate-200 active:scale-95 active:translate-y-[2px] transition-all shadow-[0_4px_0_#e2e8f0,0_8px_16px_rgba(0,0,0,0.05)] active:shadow-none">
+                    <span className="font-black text-[11px] tracking-[3px] text-slate-700">
                         {currentDate.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                     </span>
                 </button>
+                {currentHoliday && (
+                    <button 
+                        onClick={() => setHolidayModal(currentHoliday)}
+                        className="w-8 h-8 rounded-full flex items-center justify-center bg-white border border-slate-200 shadow-[0_2px_0_#e2e8f0,0_4px_8px_rgba(0,0,0,0.05)] active:scale-90 active:shadow-none active:translate-y-[1px] transition-all group"
+                    >
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border border-white shadow-inner ${currentHoliday.color}`}>
+                            <span className="text-[10px] drop-shadow-sm">{currentHoliday.icon}</span>
+                        </div>
+                    </button>
+                )}
             </div>
         </div>
 
@@ -1116,7 +1108,7 @@ const CountBadge = ({ count, data }: { count: number, data?: any }) => {
         const currentDataStr = JSON.stringify(data);
         if (currentDataStr !== lastDataRef.current) {
             setIsAnimating(true);
-            const timer = setTimeout(() => setIsAnimating(false), 600);
+            const timer = setTimeout(() => setIsAnimating(false), 1500);
             lastDataRef.current = currentDataStr;
             return () => clearTimeout(timer);
         }
@@ -1125,9 +1117,9 @@ const CountBadge = ({ count, data }: { count: number, data?: any }) => {
     if (count === 0) return null;
 
     return (
-        <div className={`absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center font-black text-[8px] transition-all duration-500 border border-white shadow-md ${
+        <div className={`absolute -top-1.5 -right-1.5 min-w-[16px] h-[16px] px-1 rounded-full flex items-center justify-center font-black text-[8px] transition-all duration-1000 border border-white shadow-md ${
             isAnimating 
-            ? 'bg-[#4ade80] text-white shadow-[0_0_20px_#4ade80,0_0_10px_#4ade80] scale-125 z-10' 
+            ? 'bg-[#4ade80] text-white shadow-[0_0_25px_#4ade80,0_0_15px_#4ade80] scale-125 z-10' 
             : 'bg-[#ff3b30] text-white'
         }`}>
             {count}
@@ -1189,17 +1181,21 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                             <div className="flex-1 flex flex-col gap-1.5">
                                 <div className="flex gap-1 items-center">
                                     {/* Campo Contrato - Ajustado para 10 dígitos */}
-                                    <div className="flex flex-col gap-1 w-[85px] shrink-0">
+                                    <div className="flex flex-col gap-1 w-[100px] shrink-0">
                                         <div className="relative">
                                             <input 
                                                 type="number" 
                                                 placeholder="CONTRATO" 
                                                 value={item.contract} 
-                                                onFocus={() => onFocusInput(item.id, 'contract')}
+                                                onFocus={(e) => {
+                                                    onFocusInput(item.id, 'contract');
+                                                    resetInactivityTimer(e.target as HTMLInputElement);
+                                                }}
                                                 onChange={e => {
                                                     const val = e.target.value;
                                                     if (val.length <= 10) {
                                                         onUpdate({...item, contract: val});
+                                                        resetInactivityTimer(e.target as HTMLInputElement);
                                                         if (val.length === 10) {
                                                             serialRefs.current[item.id]?.focus();
                                                         }
@@ -1240,12 +1236,11 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                                         </div>
                                     </div>
 
-                                    {/* Botões de Ação */}
                                     <div className="flex gap-1 shrink-0">
-                                        <button onClick={() => onCamera(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#111827] text-white active:scale-95 transition-all shadow-md">
+                                        <button onClick={() => onCamera(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#111827] text-white active:scale-95 active:translate-y-[2px] transition-all shadow-[0_4px_0_#000,0_8px_16px_rgba(0,0,0,0.2)] active:shadow-none">
                                             <IconCameraLens className="w-4 h-4"/>
                                         </button>
-                                        <button onClick={() => onGallery(item)} className={`w-8 h-8 flex items-center justify-center rounded-lg active:scale-95 transition-all border ${item.photos.length > 0 ? 'bg-green-50 text-green-600 border-green-100' : 'bg-white text-slate-300 border-slate-100 shadow-sm'}`}>
+                                        <button onClick={() => onGallery(item)} className={`w-8 h-8 flex items-center justify-center rounded-lg active:scale-95 active:translate-y-[2px] transition-all border ${item.photos.length > 0 ? 'bg-green-50 text-green-600 border-green-100 shadow-[0_4px_0_#dcfce7]' : 'bg-white text-slate-300 border-slate-100 shadow-[0_4px_0_#f1f5f9]'} active:shadow-none`}>
                                             <div className="relative">
                                                 <IconGallery className="w-4 h-4"/>
                                                 <CountBadge count={item.photos.length} />
@@ -1301,8 +1296,8 @@ const PhotoGalleryModal = ({ item, onClose }: any) => (
 const Modal = ({ title, children, onClose }: any) => (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
         <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={onClose} />
-        <div className="relative w-full max-w-sm bg-white border border-slate-100 rounded-[3rem] shadow-2xl p-10 animate-pop-in">
-            <div className="flex justify-between items-center mb-8">
+        <div className="relative w-full max-w-sm bg-white border border-slate-100 rounded-[2.5rem] shadow-2xl p-6 animate-pop-in">
+            <div className="flex justify-between items-center mb-6">
                 <h3 className="font-black uppercase tracking-[5px] text-[9px] text-slate-400">{title}</h3>
                 <button onClick={onClose} className="p-2.5 rounded-xl bg-slate-50 active:scale-95 transition-all text-slate-400"><IconX className="w-4 h-4"/></button>
             </div>
