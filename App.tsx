@@ -38,24 +38,32 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
     const targetYear = date.getFullYear();
     const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
     
-    // 1. Coletar todos os itens ativos do mês
     const monthItems: { date: string, category: string, item: EquipmentItem }[] = [];
     const categoryTotals: Record<string, number> = {};
     let grandTotal = 0;
 
-    Object.entries(data).forEach(([dateStr, dayData]) => {
+    // Iteração exaustiva e robusta sobre todos os dados
+    Object.keys(data).forEach(dateKey => {
+        const dayData = data[dateKey];
         if (!dayData) return;
-        const parts = dateStr.split('-').map(Number);
+
+        // Normaliza a data para suportar diferentes separadores se existirem
+        const normalizedKey = dateKey.replace(/\//g, '-');
+        const parts = normalizedKey.split('-').map(Number);
         if (parts.length !== 3) return;
         const [y, m] = parts;
         
+        // Verifica se o ano e mês batem (m é 1-based no formato YYYY-MM-DD)
         if (y === targetYear && m === (targetMonth + 1)) {
-            // Iteramos sobre todas as chaves para garantir que nenhum dado legado seja perdido
-            Object.entries(dayData).forEach(([cat, items]) => {
+            Object.keys(dayData).forEach(cat => {
+                const items = dayData[cat];
+                if (!Array.isArray(items)) return;
+
                 if (!categoryTotals[cat]) categoryTotals[cat] = 0;
+                
                 items.forEach(item => {
                     if (isItemActive(item)) {
-                        monthItems.push({ date: dateStr, category: cat, item });
+                        monthItems.push({ date: dateKey, category: cat, item });
                         categoryTotals[cat]++;
                         grandTotal++;
                     }
@@ -64,36 +72,37 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
         }
     });
 
-    // 2. Ordenar: Primeiro por Data, depois por Hora de criação
+    // Ordenar: Primeiro por Data, depois por Hora de criação
     monthItems.sort((a, b) => {
         if (a.date !== b.date) return a.date.localeCompare(b.date);
-        return (a.item.createdAt || 0) - (b.item.createdAt || 0);
+        const timeA = a.item.createdAt || 0;
+        const timeB = b.item.createdAt || 0;
+        return timeA - timeB;
     });
 
-    // 3. Gerar o cabeçalho do relatório
+    // Construção do texto otimizada para espaço e clareza
     let report = `============================================================\n`;
     report += `              RELATÓRIO MENSAL DE EQUIPAMENTOS\n`;
     report += `============================================================\n`;
     report += `MÊS: ${monthName.toUpperCase()} | ANO: ${targetYear}\n`;
     report += `GERADO EM: ${new Date().toLocaleString('pt-BR')}\n`;
     report += `TOTAL DE REGISTROS NO MÊS: ${grandTotal}\n`;
-    report += `============================================================\n\n`;
+    report += `============================================================\n`;
 
-    // 4. Listar itens agrupados por dia
-    let currentDateStr = "";
+    let lastDateStr = "";
     monthItems.forEach((entry) => {
-        if (entry.date !== currentDateStr) {
-            currentDateStr = entry.date;
-            const [y, m, d] = currentDateStr.split('-').map(Number);
+        if (entry.date !== lastDateStr) {
+            lastDateStr = entry.date;
+            const [y, m, d] = lastDateStr.split('-').map(Number);
             const dateObj = new Date(y, m - 1, d);
             const fullDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
-            report += `\n>>> DIA: ${fullDate.toUpperCase()}\n`;
+            report += `\n[ DATA: ${fullDate.toUpperCase()} ]\n`;
             report += `------------------------------------------------------------\n`;
         }
 
         const time = entry.item.createdAt ? new Date(entry.item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-        const cat = entry.category.padEnd(12);
-        const ctr = (entry.item.contract || 'N/A').padEnd(15);
+        const cat = entry.category.toUpperCase().padEnd(12);
+        const ctr = (entry.item.contract || 'N/A').padEnd(12);
         const sn = (entry.item.serial || 'N/A');
         
         report += `${time} | ${cat} | CTR: ${ctr} | SN: ${sn}\n`;
@@ -103,24 +112,31 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
         report += `\nNENHUM REGISTRO ENCONTRADO PARA ESTE MÊS.\n`;
     }
 
-    // 5. Resumo Final com destaque
+    // Resumo Final com destaque visual
     report += `\n\n============================================================\n`;
     report += `                   RESUMO FINAL DO MÊS\n`;
     report += `============================================================\n`;
     
-    // Usamos CATEGORIES para a ordem, mas incluímos outros se existirem
-    const allCats = Array.from(new Set([...CATEGORIES, ...Object.keys(categoryTotals)]));
-    allCats.forEach(cat => {
+    // Ordem fixa pelas categorias conhecidas
+    CATEGORIES.forEach(cat => {
         const count = categoryTotals[cat] || 0;
-        if (count > 0 || CATEGORIES.includes(cat as any)) {
-            const label = `[ ${cat.toUpperCase()} ]`.padEnd(30);
+        const label = `** ${cat.toUpperCase()} **`.padEnd(25);
+        const value = String(count).padStart(6);
+        report += `${label} : ${value} ITENS\n`;
+    });
+
+    // Outras categorias se existirem
+    Object.keys(categoryTotals).forEach(cat => {
+        if (!CATEGORIES.includes(cat as any)) {
+            const count = categoryTotals[cat];
+            const label = `** ${cat.toUpperCase()} **`.padEnd(25);
             const value = String(count).padStart(6);
             report += `${label} : ${value} ITENS\n`;
         }
     });
     
     report += `------------------------------------------------------------\n`;
-    const grandLabel = `[ TOTAL GERAL DO MÊS ]`.padEnd(30);
+    const grandLabel = `** TOTAL GERAL DO MÊS **`.padEnd(25);
     const grandValue = String(grandTotal).padStart(6);
     report += `${grandLabel} : ${grandValue} ITENS\n`;
     report += `============================================================\n`;
@@ -215,7 +231,13 @@ const dataReducer = (state: AppData, action: Action): AppData => {
     }
 }
 
-const isItemActive = (item: EquipmentItem): boolean => (item.contract && item.contract.trim() !== '') || (item.serial && item.serial.trim() !== '') || item.photos.length > 0;
+const isItemActive = (item: EquipmentItem): boolean => {
+    if (!item) return false;
+    const hasContract = !!(item.contract && item.contract.trim());
+    const hasSerial = !!(item.serial && item.serial.trim());
+    const hasPhotos = !!(item.photos && Array.isArray(item.photos) && item.photos.length > 0);
+    return hasContract || hasSerial || hasPhotos;
+};
 
 // Tipagem correta para o ErrorBoundary
 interface ErrorBoundaryProps {
@@ -469,36 +491,57 @@ const AppContent = () => {
   };
 
   const somaTotalGeral = useMemo(() => {
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
+    const targetMonth = currentDate.getMonth();
+    const targetYear = currentDate.getFullYear();
     
-    return Object.entries(appData).reduce((acc: number, [dateStr, day]) => {
-        if (!day) return acc;
-        const parts = dateStr.split('-').map(Number);
-        if (parts.length !== 3) return acc;
+    let total = 0;
+    Object.keys(appData).forEach(dateKey => {
+        const normalizedKey = dateKey.replace(/\//g, '-');
+        const parts = normalizedKey.split('-').map(Number);
+        if (parts.length !== 3) return;
+        
         const [y, m] = parts;
-
-        if (m === (currentMonth + 1) && y === currentYear) {
-            const dayTotal = Object.values(day).flat().filter(isItemActive).length;
-            return acc + dayTotal;
+        if (y === targetYear && m === (targetMonth + 1)) {
+            const dayData = appData[dateKey];
+            if (dayData) {
+                Object.values(dayData).forEach(items => {
+                    if (Array.isArray(items)) {
+                        total += items.filter(isItemActive).length;
+                    }
+                });
+            }
         }
-        return acc;
-    }, 0);
+    });
+    return total;
   }, [appData, currentDate]);
 
   const categoryTotals = useMemo(() => {
+    const targetMonth = currentDate.getMonth();
+    const targetYear = currentDate.getFullYear();
     const totals: Record<string, number> = {};
-    CATEGORIES.forEach(cat => {
-        let count = 0;
-        Object.values(appData).forEach(day => {
-            if (day && day[cat]) {
-                count += day[cat].filter(isItemActive).length;
+    
+    CATEGORIES.forEach(cat => totals[cat] = 0);
+
+    Object.keys(appData).forEach(dateKey => {
+        const normalizedKey = dateKey.replace(/\//g, '-');
+        const parts = normalizedKey.split('-').map(Number);
+        if (parts.length !== 3) return;
+        
+        const [y, m] = parts;
+        if (y === targetYear && m === (targetMonth + 1)) {
+            const dayData = appData[dateKey];
+            if (dayData) {
+                Object.keys(dayData).forEach(cat => {
+                    const items = dayData[cat];
+                    if (Array.isArray(items)) {
+                        totals[cat] = (totals[cat] || 0) + items.filter(isItemActive).length;
+                    }
+                });
             }
-        });
-        totals[cat] = count;
+        }
     });
     return totals;
-  }, [appData]);
+  }, [appData, currentDate]);
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
