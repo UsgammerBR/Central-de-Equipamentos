@@ -36,53 +36,80 @@ const isChristmasPeriod = (): boolean => {
 const generateMonthlyReport = (data: AppData, date: Date) => {
     const month = date.getMonth();
     const year = date.getFullYear();
-    let report = `Relatório Mensal - ${date.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}\n\n`;
+    const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
+    
+    let report = `==========================================\n`;
+    report += `   RELATÓRIO MENSAL DE EQUIPAMENTOS\n`;
+    report += `==========================================\n`;
+    report += `Mês: ${monthName.toUpperCase()}\n`;
+    report += `Ano: ${year}\n`;
+    report += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n`;
+    report += `==========================================\n\n`;
+    
     const totals: Record<string, number> = {};
+    let grandTotal = 0;
     
     CATEGORIES.forEach(cat => {
-        report += `--- ${cat.toUpperCase()} ---\n`;
+        report += `>>> ${cat.toUpperCase()} <<<\n`;
         let catEntries = 0;
         
         const sortedDates = Object.keys(data).sort();
         
         sortedDates.forEach(dateStr => {
-            const d = new Date(dateStr + 'T12:00:00');
-            if (d.getMonth() === month && d.getFullYear() === year) {
-                const dayData = data[dateStr][cat] || [];
-                dayData.filter(isItemActive).forEach(item => {
-                    const time = new Date(item.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                    report += `Data: ${d.toLocaleDateString('pt-BR')} | Hora: ${time}\n`;
-                    report += `Contrato: ${item.contract || '-'} | Serial: ${item.serial || '-'}\n`;
-                    report += `----------------------------\n`;
-                    catEntries++;
-                });
+            const parts = dateStr.split('-');
+            const y = parseInt(parts[0]);
+            const m = parseInt(parts[1]);
+            const d_num = parseInt(parts[2]);
+            
+            if (m === month + 1 && y === year) {
+                const dayData = data[dateStr]?.[cat] || [];
+                const activeItems = dayData.filter(isItemActive);
+                
+                if (activeItems.length > 0) {
+                    report += `Data: ${String(d_num).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}\n`;
+                    activeItems.forEach((item, idx) => {
+                        const time = item.createdAt ? new Date(item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
+                        report += `  ${idx + 1}. Hora: ${time} | Contrato: ${item.contract || 'N/A'} | Serial: ${item.serial || 'N/A'}\n`;
+                    });
+                    report += `------------------------------------------\n`;
+                    catEntries += activeItems.length;
+                }
             }
         });
         
         totals[cat] = catEntries;
-        if (catEntries === 0) report += `Nenhum registro.\n`;
+        grandTotal += catEntries;
+        if (catEntries === 0) report += `Nenhum registro encontrado.\n`;
+        else report += `Subtotal ${cat}: ${catEntries} itens\n`;
         report += `\n`;
     });
 
-    report += `\n============================\n`;
-    report += `RESUMO DE TOTAIS DO MÊS\n`;
-    report += `============================\n`;
+    report += `==========================================\n`;
+    report += `           RESUMO FINAL DO MÊS\n`;
+    report += `==========================================\n`;
     CATEGORIES.forEach(cat => {
-        report += `${cat}; ${totals[cat]}\n`;
+        report += `${cat.padEnd(15)}: ${totals[cat]} itens\n`;
     });
-    report += `============================\n`;
+    report += `------------------------------------------\n`;
+    report += `TOTAL GERAL    : ${grandTotal} itens\n`;
+    report += `==========================================\n`;
     
     return report;
 };
 
 const downloadReport = (report: string, filename: string) => {
-    const blob = new Blob([report], { type: 'text/plain' });
+    const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
+    a.style.display = 'none';
     a.href = url;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+    }, 100);
 };
 
 type Action =
