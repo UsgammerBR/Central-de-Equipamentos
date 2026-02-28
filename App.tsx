@@ -53,23 +53,30 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
         report += `>>> ${cat.toUpperCase()} <<<\n`;
         let catEntries = 0;
         
-        const sortedDates = Object.keys(data).sort();
+        // Garantir que pegamos todas as datas do mês, independente da ordem
+        const allDates = Object.keys(data).sort();
         
-        sortedDates.forEach(dateStr => {
-            const parts = dateStr.split('-');
-            const y = parseInt(parts[0]);
-            const m = parseInt(parts[1]);
-            const d_num = parseInt(parts[2]);
+        allDates.forEach(dateStr => {
+            // Formato esperado: YYYY-MM-DD
+            const [y, m, d] = dateStr.split('-').map(Number);
             
             if (m === month + 1 && y === year) {
                 const dayData = data[dateStr]?.[cat] || [];
-                const activeItems = dayData.filter(isItemActive);
+                // Incluir todos os itens que tenham pelo menos um dado preenchido
+                const activeItems = dayData.filter(item => 
+                    (item.contract && item.contract.trim() !== '') || 
+                    (item.serial && item.serial.trim() !== '') || 
+                    (item.photos && item.photos.length > 0)
+                );
                 
                 if (activeItems.length > 0) {
-                    report += `Data: ${String(d_num).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}\n`;
+                    report += `Data: ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}\n`;
                     activeItems.forEach((item, idx) => {
                         const time = item.createdAt ? new Date(item.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-                        report += `  ${idx + 1}. Hora: ${time} | Contrato: ${item.contract || 'N/A'} | Serial: ${item.serial || 'N/A'}\n`;
+                        report += `  [${idx + 1}] Hora: ${time}\n`;
+                        if (item.contract) report += `      Contrato: ${item.contract}\n`;
+                        if (item.serial) report += `      Serial: ${item.serial}\n`;
+                        if (item.photos && item.photos.length > 0) report += `      Fotos: ${item.photos.length} anexada(s)\n`;
                     });
                     report += `------------------------------------------\n`;
                     catEntries += activeItems.length;
@@ -1049,6 +1056,33 @@ const AppContent = () => {
                       </div>
                   </div>
 
+                  <button 
+                    onClick={async () => {
+                        setSyncStatus('syncing');
+                        try {
+                            const response = await fetch('/api/sync', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(appData),
+                            });
+                            if (response.ok) {
+                                setSyncStatus('synced');
+                                alert('Sincronização concluída com sucesso!');
+                            } else {
+                                setSyncStatus('error');
+                                alert('Erro ao sincronizar com o servidor.');
+                            }
+                        } catch (err) {
+                            setSyncStatus('error');
+                            alert('Erro de conexão ao sincronizar.');
+                        }
+                    }}
+                    className="w-full py-4 bg-white/5 border border-white/5 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all group"
+                  >
+                      <IconCloud className={`w-5 h-5 group-hover:scale-110 transition-transform ${syncStatus === 'synced' ? 'text-emerald-500' : 'text-amber-500'}`}/>
+                      <span className="font-black uppercase text-[10px] tracking-[2px] text-slate-300">Sincronizar Nuvem Agora</span>
+                  </button>
+
                   <div className="h-px bg-white/5 my-2"></div>
                   
                   <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px] text-center mb-2">Compartilhar Relatório Mensal</p>
@@ -1115,10 +1149,46 @@ const AppContent = () => {
               <div className="text-center py-4">
                   <CustomMenuIcon className="w-24 h-24 mx-auto mb-8 drop-shadow-2xl" isChristmas={isChristmas}/>
                   <h2 className="text-2xl font-black text-white uppercase tracking-tighter mb-2">Stream+ Control</h2>
-                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[6px] mb-10">Versão 1.0.3</p>
-                  <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5">
+                  <p className="text-[10px] font-black text-slate-500 uppercase tracking-[6px] mb-6">Versão 1.0.4</p>
+                  
+                  <div className="bg-white/5 p-6 rounded-[2.5rem] border border-white/5 mb-8">
                       <p className="text-[8px] font-black text-slate-600 uppercase tracking-[4px] mb-2">Desenvolvido por</p>
                       <p className="text-xl font-black text-cyan-500 uppercase tracking-tighter">Leo Luz</p>
+                  </div>
+
+                  <div className="space-y-4">
+                      <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px]">Compartilhar Relatório Mensal</p>
+                      <div className="grid grid-cols-3 gap-3">
+                          <button 
+                            onClick={() => {
+                                const text = generateMonthlyReport(appData, currentDate);
+                                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`);
+                            }}
+                            className="py-4 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
+                          >
+                              <IconWhatsapp className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform"/>
+                          </button>
+                          <button 
+                            onClick={() => {
+                                const text = generateMonthlyReport(appData, currentDate);
+                                window.open(`https://t.me/share/url?url=&text=${encodeURIComponent(text)}`);
+                            }}
+                            className="py-4 bg-sky-600/10 border border-sky-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
+                          >
+                              <IconTelegram className="w-6 h-6 text-sky-500 group-hover:scale-110 transition-transform"/>
+                          </button>
+                          <button 
+                            onClick={() => {
+                                const text = generateMonthlyReport(appData, currentDate);
+                                const subject = encodeURIComponent(`Relatório Mensal - ${currentDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}`);
+                                const body = encodeURIComponent(text);
+                                window.open(`mailto:?subject=${subject}&body=${body}`);
+                            }}
+                            className="py-4 bg-rose-600/10 border border-rose-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
+                          >
+                              <IconEmail className="w-6 h-6 text-rose-500 group-hover:scale-110 transition-transform"/>
+                          </button>
+                      </div>
                   </div>
               </div>
           </Modal>
