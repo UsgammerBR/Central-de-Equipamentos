@@ -34,15 +34,16 @@ const isChristmasPeriod = (): boolean => {
 };
 
 const generateMonthlyReport = (data: AppData, date: Date) => {
-    const month = date.getMonth();
-    const year = date.getFullYear();
+    // Usamos o mês e ano da data fornecida (que deve ser o mês que o usuário está visualizando)
+    const targetMonth = date.getMonth(); // 0-11
+    const targetYear = date.getFullYear();
     const monthName = date.toLocaleDateString('pt-BR', { month: 'long' });
     
     let report = `==========================================\n`;
     report += `   RELATÓRIO MENSAL DE EQUIPAMENTOS\n`;
     report += `==========================================\n`;
     report += `Mês: ${monthName.toUpperCase()}\n`;
-    report += `Ano: ${year}\n`;
+    report += `Ano: ${targetYear}\n`;
     report += `Gerado em: ${new Date().toLocaleString('pt-BR')}\n`;
     report += `==========================================\n\n`;
     
@@ -53,16 +54,22 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
         report += `>>> ${cat.toUpperCase()} <<<\n`;
         let catEntries = 0;
         
-        // Garantir que pegamos todas as datas do mês, independente da ordem
+        // Pegamos todas as chaves e filtramos apenas as que pertencem ao mês/ano alvo
         const allDates = Object.keys(data).sort();
         
         allDates.forEach(dateStr => {
-            // Formato esperado: YYYY-MM-DD
-            const [y, m, d] = dateStr.split('-').map(Number);
+            const parts = dateStr.split('-');
+            if (parts.length !== 3) return;
             
-            if (m === month + 1 && y === year) {
+            const y = parseInt(parts[0]);
+            const m = parseInt(parts[1]);
+            const d = parseInt(parts[2]);
+            
+            // Comparação numérica direta para evitar problemas de fuso horário
+            if (y === targetYear && m === (targetMonth + 1)) {
                 const dayData = data[dateStr]?.[cat] || [];
-                // Incluir todos os itens que tenham pelo menos um dado preenchido
+                
+                // Filtro de itens ativos (que tenham pelo menos um dado preenchido)
                 const activeItems = dayData.filter(item => 
                     (item.contract && item.contract.trim() !== '') || 
                     (item.serial && item.serial.trim() !== '') || 
@@ -104,7 +111,23 @@ const generateMonthlyReport = (data: AppData, date: Date) => {
     return report;
 };
 
-const downloadReport = (report: string, filename: string) => {
+const downloadReport = async (report: string, filename: string) => {
+    // Tenta usar a API de compartilhamento nativa se disponível (melhor para celular)
+    if (navigator.share) {
+        try {
+            const file = new File([report], filename, { type: 'text/plain' });
+            await navigator.share({
+                files: [file],
+                title: 'Relatório Mensal',
+                text: 'Segue o relatório mensal de equipamentos.'
+            });
+            return;
+        } catch (err) {
+            console.log('Share API failed, falling back to download', err);
+        }
+    }
+
+    // Fallback para download tradicional
     const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1029,6 +1052,7 @@ const AppContent = () => {
                           <IconDownload className="w-5 h-5 text-cyan-500 group-hover:scale-110 transition-transform"/>
                           <span className="font-black uppercase text-[8px] tracking-[2px] text-slate-300">Exportar JSON</span>
                       </button>
+                      
                       <div className="relative">
                           <button className="w-full h-full py-5 bg-white/5 border border-white/5 rounded-2xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all group">
                               <IconExport className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform"/>
@@ -1085,9 +1109,42 @@ const AppContent = () => {
 
                   <div className="h-px bg-white/5 my-2"></div>
                   
-                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px] text-center mb-2">Compartilhar Relatório Mensal</p>
+                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px] text-center mb-2">Relatório Mensal (.TXT)</p>
                   
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-3">
+                      <button 
+                        onClick={() => {
+                            const text = generateMonthlyReport(appData, currentDate);
+                            downloadReport(text, `relatorio_mensal_${currentDate.getMonth() + 1}_${currentDate.getFullYear()}.txt`);
+                        }}
+                        className="w-full py-4 bg-slate-600/20 border border-slate-500/30 rounded-2xl flex items-center justify-center gap-3 active:scale-95 transition-all group"
+                      >
+                          <IconFileExcel className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform"/>
+                          <span className="font-black uppercase text-[10px] tracking-[2px] text-slate-200">Baixar / Compartilhar TXT</span>
+                      </button>
+
+                      <button 
+                        onClick={() => {
+                            const text = generateMonthlyReport(appData, currentDate);
+                            // Copia para a área de transferência (muito útil em celular)
+                            navigator.clipboard.writeText(text).then(() => {
+                                alert("Relatório copiado para a área de transferência!");
+                            }).catch(() => {
+                                alert(text); // Fallback para visualização se falhar
+                            });
+                        }}
+                        className="w-full py-3 bg-white/5 border border-white/5 rounded-xl flex items-center justify-center gap-2 active:scale-95 transition-all"
+                      >
+                          <IconInfo className="w-4 h-4 text-slate-500"/>
+                          <span className="font-black uppercase text-[8px] tracking-[2px] text-slate-400">Copiar Texto do Relatório</span>
+                      </button>
+                  </div>
+
+                  <div className="h-px bg-white/5 my-2"></div>
+                  
+                  <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px] text-center mb-2">Compartilhar via App</p>
+                  
+                  <div className="grid grid-cols-2 gap-2">
                       <button 
                         onClick={() => {
                             const text = generateMonthlyReport(appData, currentDate);
@@ -1105,15 +1162,6 @@ const AppContent = () => {
                         className="py-4 bg-sky-600/10 border border-sky-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
                       >
                           <IconTelegram className="w-5 h-5 text-sky-500"/>
-                      </button>
-                      <button 
-                        onClick={() => {
-                            const text = generateMonthlyReport(appData, currentDate);
-                            downloadReport(text, `relatorio_mensal_${currentDate.getMonth() + 1}_${currentDate.getFullYear()}.txt`);
-                        }}
-                        className="py-4 bg-slate-600/10 border border-slate-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all"
-                      >
-                          <IconFileExcel className="w-5 h-5 text-slate-500"/>
                       </button>
                   </div>
               </div>
@@ -1158,7 +1206,7 @@ const AppContent = () => {
 
                   <div className="space-y-4">
                       <p className="text-[8px] font-black text-slate-500 uppercase tracking-[4px]">Compartilhar Relatório Mensal</p>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-4 gap-2">
                           <button 
                             onClick={() => {
                                 const text = generateMonthlyReport(appData, currentDate);
@@ -1166,7 +1214,7 @@ const AppContent = () => {
                             }}
                             className="py-4 bg-emerald-600/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
                           >
-                              <IconWhatsapp className="w-6 h-6 text-emerald-500 group-hover:scale-110 transition-transform"/>
+                              <IconWhatsapp className="w-5 h-5 text-emerald-500 group-hover:scale-110 transition-transform"/>
                           </button>
                           <button 
                             onClick={() => {
@@ -1175,7 +1223,7 @@ const AppContent = () => {
                             }}
                             className="py-4 bg-sky-600/10 border border-sky-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
                           >
-                              <IconTelegram className="w-6 h-6 text-sky-500 group-hover:scale-110 transition-transform"/>
+                              <IconTelegram className="w-5 h-5 text-sky-500 group-hover:scale-110 transition-transform"/>
                           </button>
                           <button 
                             onClick={() => {
@@ -1186,7 +1234,16 @@ const AppContent = () => {
                             }}
                             className="py-4 bg-rose-600/10 border border-rose-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
                           >
-                              <IconEmail className="w-6 h-6 text-rose-500 group-hover:scale-110 transition-transform"/>
+                              <IconEmail className="w-5 h-5 text-rose-500 group-hover:scale-110 transition-transform"/>
+                          </button>
+                          <button 
+                            onClick={() => {
+                                const text = generateMonthlyReport(appData, currentDate);
+                                downloadReport(text, `relatorio_mensal_${currentDate.getMonth() + 1}_${currentDate.getFullYear()}.txt`);
+                            }}
+                            className="py-4 bg-slate-600/10 border border-slate-500/20 rounded-2xl flex items-center justify-center active:scale-95 transition-all group"
+                          >
+                              <IconDownload className="w-5 h-5 text-slate-400 group-hover:scale-110 transition-transform"/>
                           </button>
                       </div>
                   </div>
