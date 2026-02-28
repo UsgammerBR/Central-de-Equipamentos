@@ -894,19 +894,16 @@ const AppContent = () => {
                                         setCurrentDate(d);
                                         setActiveModal(null);
                                     }} 
-                                    className={`h-9 rounded-xl font-black text-[10px] transition-all relative flex flex-col items-center justify-center ${
-                                        isSelected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30' : 
-                                        holiday?.type === 'feriado' ? 'bg-amber-100 border border-amber-300 text-amber-700 shadow-sm' :
-                                        holiday?.type === 'comemorativa' ? 'bg-pink-50 border border-pink-200 text-pink-600 shadow-sm' :
-                                        isToday ? 'bg-blue-50 text-blue-600' : 'bg-slate-50 text-slate-400 active:bg-slate-100'
+                                    className={`h-9 w-9 font-black text-[10px] transition-all relative flex flex-col items-center justify-center ${
+                                        isSelected ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 rounded-full' : 
+                                        holiday?.type === 'feriado' ? 'bg-amber-400/20 backdrop-blur-md border border-amber-400/30 text-amber-700 rounded-full' :
+                                        holiday?.type === 'comemorativa' ? 'bg-pink-400/20 backdrop-blur-md border border-pink-400/30 text-pink-600 rounded-full' :
+                                        isToday ? 'bg-blue-50 text-blue-600 rounded-xl' : 'bg-slate-50 text-slate-400 active:bg-slate-100 rounded-xl'
                                     }`}
                                 >
                                     <span>{day}</span>
-                                    {hasActivity && (
-                                        <div className={`absolute inset-0 rounded-xl border-2 pointer-events-none ${isSelected ? 'border-white/40' : 'border-cyan-500/30 bg-cyan-500/5'}`} />
-                                    )}
                                     {hasActivity && !isSelected && (
-                                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-cyan-500 shadow-[0_0_5px_rgba(6,182,212,0.5)]" />
+                                        <div className="absolute bottom-1 w-1 h-1 rounded-full bg-blue-600 shadow-[0_0_5px_rgba(37,99,235,0.5)]" />
                                     )}
                                 </button>
                               );

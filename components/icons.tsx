@@ -181,12 +181,14 @@ export const IconSpeaker = ({ className = 'w-6 h-6' }: { className?: string }) =
 );
 
 export const IconRemote = ({ className = 'w-6 h-6' }: { className?: string }) => (
-  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <rect x="7" y="2" width="10" height="20" rx="2" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="12" cy="6" r="1" />
-    <circle cx="12" cy="10" r="1" />
-    <circle cx="12" cy="14" r="1" />
-    <circle cx="12" cy="18" r="2" />
+  <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <rect x="7" y="2" width="10" height="20" rx="3" />
+    <circle cx="12" cy="6" r="1" fill="currentColor" />
+    <path d="M10 10h4M12 8v4" />
+    <circle cx="12" cy="15" r="2" />
+    <path d="M12 13v1M12 16v1M10 15h1M13 15h1" />
+    <rect x="9" y="18" width="2" height="2" rx="0.5" />
+    <rect x="13" y="18" width="2" height="2" rx="0.5" />
   </svg>
 );
 
