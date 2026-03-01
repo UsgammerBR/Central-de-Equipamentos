@@ -12,8 +12,13 @@ async function startServer() {
 
   // API routes
   app.get("/api/data", (req, res) => {
-    if (fs.existsSync(DATA_FILE)) {
-      const data = fs.readFileSync(DATA_FILE, "utf-8");
+    const email = req.query.email as string;
+    if (!email) return res.status(400).json({ error: "Email required" });
+
+    const userFile = path.join(process.cwd(), `data_${email.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
+    
+    if (fs.existsSync(userFile)) {
+      const data = fs.readFileSync(userFile, "utf-8");
       res.json(JSON.parse(data));
     } else {
       res.json({});
@@ -22,9 +27,14 @@ async function startServer() {
 
   app.post("/api/sync", (req, res) => {
     try {
-      const size = JSON.stringify(req.body).length;
-      console.log(`Received sync request. Data size: ${(size / 1024 / 1024).toFixed(2)} MB`);
-      fs.writeFileSync(DATA_FILE, JSON.stringify(req.body, null, 2));
+      const { email, data } = req.body;
+      if (!email) return res.status(400).json({ error: "Email required" });
+
+      const userFile = path.join(process.cwd(), `data_${email.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.json`);
+      
+      const size = JSON.stringify(data).length;
+      console.log(`Received sync request for ${email}. Data size: ${(size / 1024 / 1024).toFixed(2)} MB`);
+      fs.writeFileSync(userFile, JSON.stringify(data, null, 2));
       res.json({ status: "ok" });
     } catch (err) {
       console.error("Sync error:", err);

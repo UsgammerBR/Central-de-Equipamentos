@@ -328,6 +328,8 @@ const AppContent = () => {
       const saved = localStorage.getItem('userProfile');
       return saved ? JSON.parse(saved) : { name: 'Leo Luz', cpf: '', profileImage: '' };
   });
+  const [userEmail, setUserEmail] = useState<string>(() => localStorage.getItem('userEmail') || '');
+  const [loginModal, setLoginModal] = useState(!localStorage.getItem('userEmail'));
   const [activeModal, setActiveModal] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<EquipmentCategory>(CATEGORIES[0]);
   const [cameraTarget, setCameraTarget] = useState<{ category: EquipmentCategory, item: EquipmentItem | 'profile' } | null>(null);
@@ -361,10 +363,16 @@ const AppContent = () => {
     const savedData = localStorage.getItem('equipmentData');
     if (savedData) dispatch({ type: 'SET_DATA', payload: JSON.parse(savedData) });
     
-    // Then try to fetch from server
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Then try to fetch from server when email is available
+  useEffect(() => {
+    if (!userEmail || isLoading) return;
+
     const fetchServerData = async () => {
         try {
-            const response = await fetch('/api/data');
+            const response = await fetch(`/api/data?email=${encodeURIComponent(userEmail)}`);
             if (response.ok) {
                 const serverData = await response.json();
                 if (Object.keys(serverData).length > 0) {
@@ -379,8 +387,7 @@ const AppContent = () => {
     };
     
     fetchServerData();
-    return () => clearTimeout(timer);
-  }, []);
+  }, [userEmail, isLoading]);
 
   // Sync with server whenever appData changes
   useEffect(() => {
@@ -394,6 +401,8 @@ const AppContent = () => {
             return;
         }
         
+        if (!userEmail) return;
+
         setSyncStatus('syncing');
         try {
             const controller = new AbortController();
@@ -402,7 +411,7 @@ const AppContent = () => {
             const response = await fetch('/api/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(appData),
+                body: JSON.stringify({ email: userEmail, data: appData }),
                 signal: controller.signal
             });
             
@@ -436,6 +445,12 @@ const AppContent = () => {
   useEffect(() => {
     localStorage.setItem('userProfile', JSON.stringify(userProfile));
   }, [userProfile]);
+
+  useEffect(() => {
+    if (userEmail) {
+        localStorage.setItem('userEmail', userEmail);
+    }
+  }, [userEmail]);
 
   const currentDayData = useMemo(() => appData[formattedDate] || createEmptyDailyData(), [appData, formattedDate]);
 
@@ -802,6 +817,7 @@ const AppContent = () => {
             isChristmas={isChristmas}
             syncStatus={syncStatus}
             onFocusInput={(itemId: string, field: 'contract' | 'serial') => setFocusedInput({ itemId, field })}
+            onAddItem={handleAddItem}
           />
 
           {collapsedCategories[activeCategory] && currentDayData[activeCategory].filter(isItemActive).length > 0 && (
@@ -897,6 +913,102 @@ const AppContent = () => {
 
       {/* MODAIS REVERTIDOS PARA O DESIGN ORIGINAL */}
       
+      {loginModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+            <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-8 animate-pop-in">
+                <div className="flex flex-col items-center text-center mb-8">
+                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
+                        <IconCloud className="w-10 h-10 text-blue-600"/>
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Backup na Nuvem</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 leading-relaxed">
+                        Insira seu e-mail para sincronizar seus dados e nunca perder seu progresso.
+                    </p>
+                </div>
+                
+                <div className="space-y-4">
+                    <div className="relative">
+                        <input 
+                            type="email" 
+                            placeholder="SEU@EMAIL.COM" 
+                            className="w-full py-4 px-6 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-black text-[12px] text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const val = (e.target as HTMLInputElement).value;
+                                    if (val && val.includes('@')) {
+                                        setUserEmail(val);
+                                        setLoginModal(false);
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+                    <button 
+                        onClick={(e) => {
+                            const input = e.currentTarget.previousElementSibling?.querySelector('input');
+                            const val = input?.value;
+                            if (val && val.includes('@')) {
+                                setUserEmail(val);
+                                setLoginModal(false);
+                            }
+                        }}
+                        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-lg shadow-blue-600/20"
+                    >
+                        Conectar Nuvem
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {loginModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md">
+            <div className="w-full max-w-sm bg-white rounded-[2.5rem] shadow-2xl p-8 animate-pop-in">
+                <div className="flex flex-col items-center text-center mb-8">
+                    <div className="w-20 h-20 bg-blue-50 rounded-3xl flex items-center justify-center mb-4 shadow-inner">
+                        <IconCloud className="w-10 h-10 text-blue-600"/>
+                    </div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter">Backup na Nuvem</h2>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-2 leading-relaxed">
+                        Insira seu e-mail para sincronizar seus dados e nunca perder seu progresso.
+                    </p>
+                </div>
+                
+                <div className="space-y-4">
+                    <div className="relative">
+                        <input 
+                            type="email" 
+                            placeholder="SEU@EMAIL.COM" 
+                            className="w-full py-4 px-6 rounded-2xl bg-slate-50 border border-slate-100 outline-none font-black text-[12px] text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center"
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                    const val = (e.target as HTMLInputElement).value;
+                                    if (val && val.includes('@')) {
+                                        setUserEmail(val);
+                                        setLoginModal(false);
+                                    }
+                                }
+                            }}
+                        />
+                    </div>
+                    <button 
+                        onClick={(e) => {
+                            const input = e.currentTarget.previousElementSibling?.querySelector('input');
+                            const val = input?.value;
+                            if (val && val.includes('@')) {
+                                setUserEmail(val);
+                                setLoginModal(false);
+                            }
+                        }}
+                        className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] active:scale-95 transition-all shadow-lg shadow-blue-600/20"
+                    >
+                        Conectar Nuvem
+                    </button>
+                </div>
+            </div>
+        </div>
+      )}
+
       {activeModal === 'search' && (
           <Modal title="Pesquisar" onClose={() => setActiveModal(null)}>
               <div className="space-y-4">
@@ -1344,7 +1456,9 @@ const CountBadge = ({ count, data }: { count: number, data?: any }) => {
     );
 };
 
-const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas, syncStatus, onFocusInput }: any) => {
+import { motion, AnimatePresence } from "motion/react";
+
+const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCamera, deleteMode, selectedForDelete, onToggleSelect, isChristmas, syncStatus, onFocusInput, onAddItem }: any) => {
     const serialRefs = React.useRef<Record<string, HTMLInputElement | null>>({});
     const inactivityTimerRef = React.useRef<NodeJS.Timeout | null>(null);
 
@@ -1355,7 +1469,7 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
                 inputEl.blur();
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
-        }, 2000);
+        }, 3000);
     };
 
     useEffect(() => {
@@ -1373,103 +1487,136 @@ const EquipmentSection = ({ category, items, onUpdate, onDelete, onGallery, onCa
         return (a.createdAt || 0) - (b.createdAt || 0);
     });
 
+    const handlePasteContract = (e: React.ClipboardEvent, itemId: string) => {
+        // Pequeno delay para garantir que o valor foi atualizado
+        setTimeout(() => {
+            serialRefs.current[itemId]?.focus();
+        }, 50);
+    };
+
+    const handlePasteSerial = (e: React.ClipboardEvent, itemId: string) => {
+        // Pequeno delay para garantir que o valor foi atualizado
+        setTimeout(() => {
+            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+            const input = serialRefs.current[itemId];
+            if (input) input.blur();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            onAddItem();
+        }, 100);
+    };
+
     return (
         <div className="space-y-2">
-            {sortedItems.map((item: any) => (
-                <div key={item.id} className="flex gap-1.5 animate-fade-in">
-                    <div className={`flex-1 p-2 rounded-[1.2rem] border shadow-sm flex flex-col gap-2 transition-all duration-500 ${deleteMode && selectedForDelete?.includes(item.id) ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
-                        <div className="flex gap-1.5 items-center">
-                            {deleteMode && (
-                                <button 
-                                    onClick={() => onToggleSelect(item.id)}
-                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${selectedForDelete?.includes(item.id) ? 'bg-red-500 border-red-400 text-white' : 'bg-slate-50 border-slate-200 text-transparent'}`}
-                                >
-                                    <IconTrash className="w-3 h-3"/>
-                                </button>
-                            )}
-                            
-                            {/* Hora à esquerda */}
-                            <div className="min-w-[35px] flex flex-col items-center justify-center opacity-30">
-                                <span className="text-[8px] font-black text-slate-500">
-                                    {new Date(item.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                            </div>
-
-                            <div className="flex-1 flex flex-col gap-1.5">
-                                <div className="flex gap-1 items-center">
-                                    {/* Campo Contrato - Ajustado para 10 dígitos */}
-                                    <div className="flex flex-col gap-1 w-[100px] shrink-0">
-                                        <div className="relative">
-                                            <input 
-                                                type="number" 
-                                                placeholder="CONTRATO" 
-                                                value={item.contract} 
-                                                onFocus={(e) => {
-                                                    onFocusInput(item.id, 'contract');
-                                                    resetInactivityTimer(e.target as HTMLInputElement);
-                                                }}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    if (val.length <= 10) {
-                                                        onUpdate({...item, contract: val});
-                                                        resetInactivityTimer(e.target as HTMLInputElement);
-                                                        if (val.length === 10) {
-                                                            serialRefs.current[item.id]?.focus();
-                                                        }
-                                                    }
-                                                }} 
-                                                className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm"
-                                            />
-                                        </div>
-                                    </div>
+            <AnimatePresence mode="popLayout">
+                {sortedItems.map((item: any) => {
+                    const isActive = isItemActive(item);
+                    return (
+                        <motion.div 
+                            key={item.id} 
+                            layout
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, y: -20 }}
+                            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                            className="flex gap-1.5"
+                        >
+                            <div className={`flex-1 p-2 rounded-[1.2rem] border shadow-sm flex flex-col gap-2 transition-all duration-500 ${deleteMode && selectedForDelete?.includes(item.id) ? 'bg-red-50 border-red-100' : isActive ? 'bg-white border-slate-100 opacity-80 scale-[0.98]' : 'bg-slate-50 border-slate-100'}`}>
+                                <div className="flex gap-1.5 items-center">
+                                    {deleteMode && (
+                                        <button 
+                                            onClick={() => onToggleSelect(item.id)}
+                                            className={`w-6 h-6 rounded-lg border flex items-center justify-center transition-all ${selectedForDelete?.includes(item.id) ? 'bg-red-500 border-red-400 text-white' : 'bg-slate-50 border-slate-200 text-transparent'}`}
+                                        >
+                                            <IconTrash className="w-3 h-3"/>
+                                        </button>
+                                    )}
                                     
-                                    {/* Campo Serial - Ajustado para 20 dígitos */}
-                                    <div className="flex flex-col gap-1 flex-1 min-w-0">
-                                        <div className="relative">
-                                            <input 
-                                                ref={el => serialRefs.current[item.id] = el}
-                                                type="text" 
-                                                placeholder="SERIAL" 
-                                                value={item.serial} 
-                                                onFocus={(e) => {
-                                                    onFocusInput(item.id, 'serial');
-                                                    resetInactivityTimer(e.target as HTMLInputElement);
-                                                }}
-                                                onChange={e => {
-                                                    const val = e.target.value;
-                                                    if (val.length <= 20) {
-                                                        onUpdate({...item, serial: val});
-                                                        resetInactivityTimer(e.target as HTMLInputElement);
-                                                        if (val.length === 20) {
-                                                            // Recolhe teclado e sobe pro topo
-                                                            if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
-                                                            (e.target as HTMLInputElement).blur();
-                                                            window.scrollTo({ top: 0, behavior: 'smooth' });
-                                                        }
-                                                    }
-                                                }} 
-                                                className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm truncate"
-                                            />
-                                        </div>
+                                    {/* Hora à esquerda */}
+                                    <div className="min-w-[35px] flex flex-col items-center justify-center opacity-30">
+                                        <span className="text-[8px] font-black text-slate-500">
+                                            {new Date(item.createdAt || Date.now()).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                        </span>
                                     </div>
 
-                                    <div className="flex gap-1 shrink-0">
-                                        <button onClick={() => onCamera(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#111827] text-white active:scale-95 active:translate-y-[2px] transition-all shadow-[0_4px_0_#000,0_8px_16px_rgba(0,0,0,0.2)] active:shadow-none">
-                                            <IconCameraLens className="w-4 h-4"/>
-                                        </button>
-                                        <button onClick={() => onGallery(item)} className={`w-8 h-8 flex items-center justify-center rounded-lg active:scale-95 active:translate-y-[2px] transition-all border ${item.photos.length > 0 ? 'bg-green-50 text-green-600 border-green-100 shadow-[0_4px_0_#dcfce7]' : 'bg-white text-slate-300 border-slate-100 shadow-[0_4px_0_#f1f5f9]'} active:shadow-none`}>
-                                            <div className="relative">
-                                                <IconGallery className="w-4 h-4"/>
-                                                <CountBadge count={item.photos.length} />
+                                    <div className="flex-1 flex flex-col gap-1.5">
+                                        <div className="flex gap-1 items-center">
+                                            {/* Campo Contrato */}
+                                            <div className="flex flex-col gap-1 w-[100px] shrink-0">
+                                                <div className="relative">
+                                                    <input 
+                                                        type="number" 
+                                                        placeholder="CONTRATO" 
+                                                        value={item.contract} 
+                                                        onFocus={(e) => {
+                                                            onFocusInput(item.id, 'contract');
+                                                            resetInactivityTimer(e.target as HTMLInputElement);
+                                                        }}
+                                                        onPaste={(e) => handlePasteContract(e, item.id)}
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            if (val.length <= 10) {
+                                                                onUpdate({...item, contract: val});
+                                                                resetInactivityTimer(e.target as HTMLInputElement);
+                                                                if (val.length === 10) {
+                                                                    serialRefs.current[item.id]?.focus();
+                                                                }
+                                                            }
+                                                        }} 
+                                                        className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm"
+                                                    />
+                                                </div>
                                             </div>
-                                        </button>
+                                            
+                                            {/* Campo Serial */}
+                                            <div className="flex flex-col gap-1 flex-1 min-w-0">
+                                                <div className="relative">
+                                                    <input 
+                                                        ref={el => serialRefs.current[item.id] = el}
+                                                        type="text" 
+                                                        placeholder="SERIAL" 
+                                                        value={item.serial} 
+                                                        onFocus={(e) => {
+                                                            onFocusInput(item.id, 'serial');
+                                                            resetInactivityTimer(e.target as HTMLInputElement);
+                                                        }}
+                                                        onPaste={(e) => handlePasteSerial(e, item.id)}
+                                                        onChange={e => {
+                                                            const val = e.target.value;
+                                                            if (val.length <= 20) {
+                                                                onUpdate({...item, serial: val});
+                                                                resetInactivityTimer(e.target as HTMLInputElement);
+                                                                if (val.length === 20) {
+                                                                    if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
+                                                                    (e.target as HTMLInputElement).blur();
+                                                                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                                                                    onAddItem();
+                                                                }
+                                                            }
+                                                        }} 
+                                                        className="w-full py-2 px-1 rounded-lg border border-slate-100 outline-none font-black text-[11px] bg-white text-slate-800 placeholder-slate-300 focus:border-blue-200 transition-all text-center shadow-sm truncate"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex gap-1 shrink-0">
+                                                <button onClick={() => onCamera(item)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-[#111827] text-white active:scale-95 active:translate-y-[2px] transition-all shadow-[0_4px_0_#000,0_8px_16px_rgba(0,0,0,0.2)] active:shadow-none">
+                                                    <IconCameraLens className="w-4 h-4"/>
+                                                </button>
+                                                <button onClick={() => onGallery(item)} className={`w-8 h-8 flex items-center justify-center rounded-lg active:scale-95 active:translate-y-[2px] transition-all border ${item.photos.length > 0 ? 'bg-green-50 text-green-600 border-green-100 shadow-[0_4px_0_#dcfce7]' : 'bg-white text-slate-300 border-slate-100 shadow-[0_4px_0_#f1f5f9]'} active:shadow-none`}>
+                                                    <div className="relative">
+                                                        <IconGallery className="w-4 h-4"/>
+                                                        <CountBadge count={item.photos.length} />
+                                                    </div>
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                </div>
-            ))}
+                        </motion.div>
+                    );
+                })}
+            </AnimatePresence>
 
             <div className="flex justify-center mt-4">
                 <div className="flex items-center gap-1.5 px-3 py-1 bg-white/50 backdrop-blur-sm rounded-full border border-slate-100/50 shadow-sm">
